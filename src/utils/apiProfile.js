@@ -52,7 +52,7 @@ export const deleteUserDetail = async (itemId) => {
 // 5. บันทึกข้อมูลบัญชีเริ่มต้น (Register)
 export const registerBasicUser = async (username, password) => {
   try {
-    const res = await fetch(`${API_URL}/api/register`, {
+    const res = await fetch(`${API_URL}/api/register/basic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
