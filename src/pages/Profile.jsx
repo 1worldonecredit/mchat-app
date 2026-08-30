@@ -1,11 +1,8 @@
 import { ArrowLeft, Camera, Lock, Plus, Users, Shield, Activity, CheckCircle2, X, Briefcase, GraduationCap, MapPin, HeartPulse, Trash2, Loader2, LogOut, Key } from 'lucide-react';
 import { useState, useEffect } from 'react';
-// เพิ่ม changePassword เข้ามาใน import ด้วย
 import { fetchUserProfile, fetchUserDetails, saveUserDetail, deleteUserDetail, changePassword } from '../utils/apiProfile';
 import '../Profile.css';
 
-
-// วางโค้ดนี้ใต้บรรทัด import ทั้งหมด
 const calculateExactAge = (dateString) => {
   if (!dateString) return 'ไม่มีข้อมูล';
   
@@ -29,10 +26,8 @@ const calculateExactAge = (dateString) => {
 
   return `${years} ปี ${months} เดือน ${days} วัน`;
 };
-// รับ onLogout เข้ามาทาง props
+
 export default function Profile({ onBack, onLogout }) {
-
-
   const [userProfile, setUserProfile] = useState(null); 
   const [details, setDetails] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -42,7 +37,6 @@ export default function Profile({ onBack, onLogout }) {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // เพิ่ม field สำหรับรหัสผ่านเตรียมไว้ใน formData
   const [formData, setFormData] = useState({ title: '', subtitle: '', desc: '', oldPassword: '', newPassword: '', confirmPassword: '' });
   
   const [coverPreview, setCoverPreview] = useState(() => localStorage.getItem('saved_cover') || null);
@@ -50,7 +44,7 @@ export default function Profile({ onBack, onLogout }) {
   
   const [avatarPreview, setAvatarPreview] = useState(() => localStorage.getItem('saved_avatar') || null);
   const [avatarFile, setAvatarFile] = useState(null);
-  // ดึง ID ผู้ใช้จาก localStorage ที่เราเซฟไว้ตอน Login/Register
+
   const currentUserId = localStorage.getItem('currentUserId');
 
   const handleImageChange = (e, type) => {
@@ -94,7 +88,6 @@ export default function Profile({ onBack, onLogout }) {
     loadData();
   }, []);
 
- // เปลี่ยนฟังก์ชัน loadData เป็นแบบนี้
   const loadData = async () => {
     try {
       setLoading(true);
@@ -108,7 +101,6 @@ export default function Profile({ onBack, onLogout }) {
       setLoading(false);
     } catch (error) {
       console.error("โหลดข้อมูลไม่สำเร็จ:", error);
-      // ถ้าหา User ไม่เจอ ให้ลบข้อมูลในเครื่องทิ้งแล้วเด้งกลับหน้า Login
       localStorage.clear();
       window.location.href = '/'; 
     }
@@ -116,7 +108,6 @@ export default function Profile({ onBack, onLogout }) {
 
   const handleOpenModal = (type) => {
     setErrorMsg('');
-    // เคลียร์ค่าทั้งหมดก่อนเปิด Modal
     setFormData({ title: '', subtitle: '', desc: '', oldPassword: '', newPassword: '', confirmPassword: '' });
     setModalType(type);
     setModalOpen(true);
@@ -126,7 +117,6 @@ export default function Profile({ onBack, onLogout }) {
     setIsSaving(true);
     setErrorMsg('');
     try {
-      // แยกลอจิกการเซฟ หากเป็น modal เปลี่ยนรหัสผ่าน
       if (modalType === 'password') {
         if (!formData.oldPassword || !formData.newPassword) throw new Error('กรุณากรอกรหัสผ่านให้ครบถ้วน');
         if (formData.newPassword !== formData.confirmPassword) throw new Error('รหัสผ่านใหม่ไม่ตรงกัน');
@@ -135,7 +125,6 @@ export default function Profile({ onBack, onLogout }) {
         setModalOpen(false);
         alert('เปลี่ยนรหัสผ่านสำเร็จ!');
       } else {
-        // ลอจิกการบันทึกข้อมูลรายละเอียดเดิม
         if (!formData.title) {
           setErrorMsg('กรุณาระบุหัวข้อหลัก');
           setIsSaving(false);
@@ -152,13 +141,14 @@ export default function Profile({ onBack, onLogout }) {
     }
   };
 
-const handleLogout = () => {
+  const handleLogout = () => {
     if (window.confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
       localStorage.clear();
       sessionStorage.clear();
       window.location.href = '/';
     }
   };
+
   const handleDelete = async (id) => {
     if (window.confirm('ยืนยันการลบข้อมูลนี้? (Soft Delete)')) {
       await deleteUserDetail(id);
@@ -221,13 +211,11 @@ const handleLogout = () => {
         </button>
         <h2 className="text-[var(--text-heading)] text-lg font-bold">โปรไฟล์ของฉัน</h2>
         
-        {/* เปลี่ยนจาก div ว่างๆ เป็นปุ่ม Logout สีแดง */}
-       <button onClick={handleLogout} className="text-[var(--icon-inactive)] hover:text-red-500 hover:bg-red-500/10 transition p-2 rounded-lg" title="ออกจากระบบ">
-        <LogOut size={22} />
+        <button onClick={handleLogout} className="text-[var(--icon-inactive)] hover:text-red-500 hover:bg-red-500/10 transition p-2 rounded-lg" title="ออกจากระบบ">
+          <LogOut size={22} />
         </button>
       </div>
 
-      {/* Cover & Avatar */}
       <div className="profile-cover-container group">
         <img src={coverPreview || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"} alt="cover" className="profile-cover-img" />
         
@@ -261,7 +249,6 @@ const handleLogout = () => {
       </div>
 
       <div className="px-6 pt-14 pb-10 max-w-5xl mx-auto w-full">
-        
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-heading)] mb-1">{userProfile.username}</h1>
@@ -272,36 +259,35 @@ const handleLogout = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-5 col-span-1 md:col-span-2 lg:col-span-3 relative overflow-hidden" style={{ boxShadow: 'var(--card-shadow)' }}>
             <div className="flex items-center gap-2 mb-4 text-[var(--text-heading)] border-b border-[var(--border-color)] pb-3">
               <Lock size={20} className="text-red-500" /> 
               <h3 className="font-semibold tracking-wide">ข้อมูลพื้นฐาน (เปลี่ยนไม่ได้)</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-  <div>
-    <p className="text-[var(--icon-inactive)] text-xs mb-1">Global ID</p>
-    <p className="text-[var(--icon-active)] font-mono font-bold">{userProfile.global_id}</p>
-  </div>
-  
-  <div>
-    <p className="text-[var(--icon-inactive)] text-xs mb-1">อายุ</p>
-    {/* ดึงวันเกิดมาเข้าสูตรคำนวณตรงนี้ */}
-    <p className="text-[var(--text-heading)] text-xs text-[#86EFAC]">
-      {calculateExactAge(userProfile.date_of_birth)}
-    </p>
-  </div>
-  
-  <div>
-    <p className="text-[var(--icon-inactive)] text-xs mb-1">สัญชาติ / เพศ</p>
-    <p className="text-[var(--text-heading)]">{userProfile.nationality} / {userProfile.gender}</p>
-  </div>
-  
-  <div>
-    <p className="text-[var(--icon-inactive)] text-xs mb-1">เบอร์โทรศัพท์</p>
-    <p className="text-[var(--text-heading)] font-mono">{userProfile.phone}</p>
-  </div>
-</div>
+              <div>
+                <p className="text-[var(--icon-inactive)] text-xs mb-1">Global ID</p>
+                <p className="text-[var(--icon-active)] font-mono font-bold">{userProfile.global_id}</p>
+              </div>
+              
+              <div>
+                <p className="text-[var(--icon-inactive)] text-xs mb-1">อายุ</p>
+                <p className="text-[var(--text-heading)] text-xs text-[#86EFAC]">
+                  {calculateExactAge(userProfile.date_of_birth)}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-[var(--icon-inactive)] text-xs mb-1">สัญชาติ / เพศ</p>
+                <p className="text-[var(--text-heading)]">{userProfile.nationality} / {userProfile.gender}</p>
+              </div>
+              
+              <div>
+                <p className="text-[var(--icon-inactive)] text-xs mb-1">เบอร์โทรศัพท์</p>
+                <p className="text-[var(--text-heading)] font-mono">{userProfile.phone}</p>
+              </div>
+            </div>
+          </div>
 
           <ProfileCard title="เครือข่าย & เลเวล" icon={Activity} type="network" disableAdd={true}>
             <div className="grid grid-cols-2 gap-4 text-center mt-2">
@@ -316,7 +302,6 @@ const handleLogout = () => {
             </div>
           </ProfileCard>
 
-          {/* เพิ่มปุ่มเปลี่ยนรหัสผ่านที่นี่ (Card ระบบ & สิทธิ์) */}
           <ProfileCard title="ระบบ & สิทธิ์" icon={Shield} type="system" disableAdd={true}>
             <div className="space-y-3">
               <p className="flex justify-between items-center"><span className="text-[var(--icon-inactive)]">สิทธิ์ผู้ใช้:</span> <span className="font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md">{userProfile.settings.role}</span></p>
@@ -350,7 +335,6 @@ const handleLogout = () => {
           <ProfileCard title="ข้อมูลสุขภาพ" icon={HeartPulse} type="health">
             {getItemsByType('health').length > 0 ? getItemsByType('health').map(item => <DetailItem key={item.id} item={item} />) : <EmptyState label="สุขภาพ" />}
           </ProfileCard>
-
         </div>
       </div>
 
@@ -369,11 +353,8 @@ const handleLogout = () => {
             )}
 
             <div className="space-y-4">
-              {/* แยกลอจิกแสดงช่อง Input ระหว่างเปลี่ยนรหัสผ่าน กับเพิ่มข้อมูลปกติ */}
-             {/* แยกลอจิกแสดงช่อง Input ระหว่างเปลี่ยนรหัสผ่าน กับเพิ่มข้อมูลปกติ */}
               {modalType === 'password' ? (
                 <>
-                  {/* เพิ่มกล่องยืนยันชื่อผู้ใช้ตรงนี้ */}
                   <div className="mb-4 p-3 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl flex justify-between items-center opacity-80">
                     <span className="text-[var(--icon-inactive)] text-sm">บัญชีผู้ใช้:</span>
                     <span className="text-[var(--icon-active)] font-bold tracking-wider">@{userProfile?.username}</span>
