@@ -4,6 +4,31 @@ import { useState, useEffect } from 'react';
 import { fetchUserProfile, fetchUserDetails, saveUserDetail, deleteUserDetail, changePassword } from '../utils/apiProfile';
 import '../Profile.css';
 
+
+// วางโค้ดนี้ใต้บรรทัด import ทั้งหมด
+const calculateExactAge = (dateString) => {
+  if (!dateString) return 'ไม่มีข้อมูล';
+  
+  const startDate = new Date(dateString);
+  const today = new Date();
+  
+  let years = today.getFullYear() - startDate.getFullYear();
+  let months = today.getMonth() - startDate.getMonth();
+  let days = today.getDate() - startDate.getDate();
+
+  if (days < 0) {
+    months--;
+    const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += lastMonth.getDate();
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  return `${years} ปี ${months} เดือน ${days} วัน`;
+};
 // รับ onLogout เข้ามาทาง props
 export default function Profile({ onBack, onLogout }) {
 
@@ -254,12 +279,29 @@ const handleLogout = () => {
               <h3 className="font-semibold tracking-wide">ข้อมูลพื้นฐาน (เปลี่ยนไม่ได้)</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div><p className="text-[var(--icon-inactive)] text-xs mb-1">Global ID</p><p className="text-[var(--icon-active)] font-mono font-bold">{userProfile.global_id}</p></div>
-              <div><p className="text-[var(--icon-inactive)] text-xs mb-1">อายุ</p><p className="text-[var(--text-heading)]">{userProfile.demographics.age}</p></div>
-              <div><p className="text-[var(--icon-inactive)] text-xs mb-1">สัญชาติ / เพศ</p><p className="text-[var(--text-heading)]">{userProfile.nationality} / {userProfile.gender}</p></div>
-              <div><p className="text-[var(--icon-inactive)] text-xs mb-1">เบอร์โทรศัพท์</p><p className="text-[var(--text-heading)] font-mono">{userProfile.phone}</p></div>
-            </div>
-          </div>
+  <div>
+    <p className="text-[var(--icon-inactive)] text-xs mb-1">Global ID</p>
+    <p className="text-[var(--icon-active)] font-mono font-bold">{userProfile.global_id}</p>
+  </div>
+  
+  <div>
+    <p className="text-[var(--icon-inactive)] text-xs mb-1">อายุ</p>
+    {/* ดึงวันเกิดมาเข้าสูตรคำนวณตรงนี้ */}
+    <p className="text-[var(--text-heading)] text-xs text-[#86EFAC]">
+      {calculateExactAge(userProfile.date_of_birth)}
+    </p>
+  </div>
+  
+  <div>
+    <p className="text-[var(--icon-inactive)] text-xs mb-1">สัญชาติ / เพศ</p>
+    <p className="text-[var(--text-heading)]">{userProfile.nationality} / {userProfile.gender}</p>
+  </div>
+  
+  <div>
+    <p className="text-[var(--icon-inactive)] text-xs mb-1">เบอร์โทรศัพท์</p>
+    <p className="text-[var(--text-heading)] font-mono">{userProfile.phone}</p>
+  </div>
+</div>
 
           <ProfileCard title="เครือข่าย & เลเวล" icon={Activity} type="network" disableAdd={true}>
             <div className="grid grid-cols-2 gap-4 text-center mt-2">
