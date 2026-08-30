@@ -1,0 +1,102 @@
+/* =========================================
+   FutureLayout.css - Spatial & Responsive UI
+   ========================================= */
+
+/* --- คอนเทนเนอร์หลักของแอป (กระจกบานใหญ่) --- */
+.glass-app-window {
+  display: flex;
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden; /* ตัดเนื้อหาที่ล้นขอบโค้ง */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- พื้นที่ย่อยภายในแอป (แผงเมนู, หน้าต่างแชท) --- */
+.glass-panel {
+  background: transparent;
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.glass-panel:last-child {
+  border-right: none;
+}
+
+/* --- ปุ่มและ Card แบบกระจก --- */
+.glass-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+.glass-btn:hover {
+  background: var(--glass-surface-hover);
+  border-color: var(--glass-highlight);
+  box-shadow: var(--accent-glow);
+}
+
+/* =========================================
+   RESPONSIVE QUERIES (การควบคุมแยกอุปกรณ์)
+   ========================================= */
+
+/* 1. สำหรับมือถือ (Mobile: 0px - 767px) */
+@media (max-width: 767px) {
+  .glass-app-window {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0; /* มือถือไม่ต้องมีขอบโค้งรอบนอก */
+    border: none;
+    flex-direction: column;
+  }
+  
+  /* ซ่อน Scrollbar แต่อะนุญาตให้ไถลข้างในได้ */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+}
+
+/* 2. สำหรับแท็บเล็ต (Tablet: 768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .glass-app-window {
+    width: 96vw;
+    height: 96vh;
+    border-radius: 28px; /* เริ่มมีขอบโค้ง */
+    flex-direction: row;
+  }
+}
+
+/* 3. สำหรับคอมพิวเตอร์ (PC: 1025px ขึ้นไป) */
+@media (min-width: 1025px) {
+  .glass-app-window {
+    width: 1200px; /* ฟิกซ์ความกว้างสูงสุด ให้ดูลอยเป็น Window */
+    max-width: 90vw;
+    height: 85vh;
+    border-radius: 32px; /* ขอบโค้งมนแบบภาพ AR */
+    flex-direction: row;
+    /* แสงสะท้อนบางๆ ขอบบนและซ้าย สร้างมิติ 3D */
+    border-top: 1px solid rgba(255,255,255,0.2);
+    border-left: 1px solid rgba(255,255,255,0.15);
+  }
+  
+  /* ตกแต่ง Scrollbar ให้ล้ำอนาคตสำหรับจอใหญ่ */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--glass-highlight);
+  }
+}

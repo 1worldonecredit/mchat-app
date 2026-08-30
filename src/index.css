@@ -1,0 +1,54 @@
+/* =========================================
+   index.css - Global Rules & Theme Variables
+   ========================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* พื้นหลังหลักของแอป (กรณีไม่มีภาพพื้นหลัง) */
+  --space-bg: #0f1015; 
+  
+  /* สีของกระจก (Glassmorphism) - โทนเข้มโปร่งแสง */
+  --glass-surface: rgba(20, 22, 30, 0.4); 
+  --glass-surface-hover: rgba(255, 255, 255, 0.08);
+  
+  /* เส้นขอบกระจกสะท้อนแสง */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.2);
+  
+  /* เอฟเฟกต์การเบลอ */
+  --glass-blur: blur(24px);
+  
+  /* สีข้อความและไอคอน */
+  --text-primary: #ffffff;
+  --text-secondary: #9CA3AF;
+  --accent-color: #3B82F6; /* สีฟ้าเรืองแสง */
+  --accent-glow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+/* กฎเหล็ก: ล็อคหน้าจอไม่ให้ Scroll และพอดีจอ 100% */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; /* ห้ามมี Scrollbar ระดับหน้าต่างเว็บเด็ดขาด */
+  background-color: var(--space-bg);
+  /* ใส่ภาพพื้นหลังแบบเบลอๆ เพื่อโชว์ความใสของกระจก (เปลี่ยน URL ได้) */
+  background-image: radial-gradient(circle at 50% 0%, #1f2937 0%, #000000 70%);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Futuristic UI Animations - Dynamic Theme Support */
+/* Futuristic UI - Dynamic Theme 100% */
+/*  */

@@ -1,0 +1,72 @@
+/* =========================================
+   หน้า HOME FEED MOCKUP (HomeFeed.css)
+   ========================================= */
+
+/* พื้นที่ Scroll หลัก */
+.home-feed-container {
+  overflow-y: auto;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background-color: var(--app-bg); /* ดึงสีพื้นหลังหลัก */
+}
+
+/* ซ่อน Scrollbar ให้ดูเนียนแบบ Spatial UI */
+.home-feed-container::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* กล่องเนื้อหาแบบกระจก (Glass Card) */
+.glass-feed-card {
+  background: var(--glass-surface, rgba(20, 22, 30, 0.4));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+.glass-feed-card:hover {
+  border-color: var(--icon-active);
+}
+
+/* วงแหวน Story/สถานะออนไลน์ (ใช้สี Active จากระบบ) */
+.story-ring {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  padding: 3px;
+  /* ไล่สีวงแหวนโดยใช้ตัวแปร --icon-active */
+  background: linear-gradient(45deg, var(--icon-active), transparent);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.story-ring:hover {
+  transform: scale(1.05);
+}
+.story-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--app-bg); /* เว้นช่องว่างระหว่างรูปกับวงแหวน */
+}
+
+/* ปุ่ม Action ภายใน Feed (ใช้ Icon ล้วน) */
+.feed-action-btn {
+  color: var(--icon-color);
+  background: transparent;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.feed-action-btn:hover {
+  color: var(--icon-active);
+  background-color: var(--glass-surface-hover, rgba(255,255,255,0.08));
+}
