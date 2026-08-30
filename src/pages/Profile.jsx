@@ -69,16 +69,24 @@ export default function Profile({ onBack, onLogout }) {
     loadData();
   }, []);
 
+ // เปลี่ยนฟังก์ชัน loadData เป็นแบบนี้
   const loadData = async () => {
-    setLoading(true);
-    const [profileData, detailsData] = await Promise.all([
-      fetchUserProfile(currentUserId),
-      fetchUserDetails(currentUserId)
-    ]);
-    
-    if (profileData) setUserProfile(profileData);
-    if (detailsData) setDetails(detailsData);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const [profileData, detailsData] = await Promise.all([
+        fetchUserProfile(currentUserId),
+        fetchUserDetails(currentUserId)
+      ]);
+      
+      if (profileData) setUserProfile(profileData);
+      if (detailsData) setDetails(detailsData);
+      setLoading(false);
+    } catch (error) {
+      console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+      // ถ้าหา User ไม่เจอ ให้ลบข้อมูลในเครื่องทิ้งแล้วเด้งกลับหน้า Login
+      localStorage.clear();
+      window.location.href = '/'; 
+    }
   };
 
   const handleOpenModal = (type) => {
