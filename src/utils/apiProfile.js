@@ -49,18 +49,17 @@ export const deleteUserDetail = async (itemId) => {
 
 // ... (โค้ดเดิมด้านบนคงไว้) ...
 
-// 5. บันทึกข้อมูลบัญชีเริ่มต้น (Register)
+// เปลี่ยน URL จาก /api/register เป็น /api/register/basic
 export const registerBasicUser = async (username, password) => {
   try {
-    const res = await fetch(`${API_URL}/api/register/basic`, {
+    const res = await fetch(`${API_URL}/api/register/basic`, {  // <--- แก้ไขบรรทัดนี้
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'ชื่อผู้ใช้นี้อาจมีในระบบแล้ว หรือเกิดข้อผิดพลาด');
     
-    // สำคัญ: Backend ต้องส่งข้อมูลกลับมาในรูปแบบ { success: true, userId: "..." }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
     return data; 
   } catch (error) {
     throw error;
