@@ -52,15 +52,16 @@ export const deleteUserDetail = async (itemId) => {
 // 5. บันทึกข้อมูลบัญชีเริ่มต้น (Register)
 export const registerBasicUser = async (username, password) => {
   try {
-    const res = await fetch(`${API_URL}/api/register/basic`, {
+    const res = await fetch(`${API_URL}/api/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาดในการสร้างบัญชี');
-    return data;
+    if (!res.ok) throw new Error(data.message || 'ชื่อผู้ใช้นี้อาจมีในระบบแล้ว หรือเกิดข้อผิดพลาด');
+    
+    // สำคัญ: Backend ต้องส่งข้อมูลกลับมาในรูปแบบ { success: true, userId: "..." }
+    return data; 
   } catch (error) {
     throw error;
   }
