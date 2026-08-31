@@ -3,6 +3,9 @@ import { createContext, useState, useEffect } from 'react';
 export const ThemeContext = createContext();
 
 const hexToRgb = (hex) => {
+  // ป้องกัน Error กรณีค่าสีไม่ใช่ Hex Code (เช่น gradient หรือค่าว่าง)
+  if (!hex || !hex.startsWith('#')) return '255, 255, 255';
+  
   let c = hex.replace('#', '');
   if (c.length === 3) c = c.split('').map(x => x + x).join('');
   const r = parseInt(c.substring(0, 2), 16);
@@ -12,30 +15,58 @@ const hexToRgb = (hex) => {
 };
 
 export function ThemeProvider({ children }) {
-  const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
-  const [accentColor, setAccentColor] = useState(localStorage.getItem('accentColor') || '#3B82F6');
-  const [transparency, setTransparency] = useState(localStorage.getItem('transparency') || '40');
-  
-  const [appBg, setAppBg] = useState(localStorage.getItem('appBg') || 'default');
-  const [cardBg, setCardBg] = useState(localStorage.getItem('cardBg') || 'default');
-  const [textColor, setTextColor] = useState(localStorage.getItem('textColor') || 'default');
-  
-  // States ใหม่ที่เพิ่มเข้ามา
-  const [borderColor, setBorderColor] = useState(localStorage.getItem('borderColor') || 'default');
-  const [fontFamily, setFontFamily] = useState(localStorage.getItem('fontFamily') || 'default');
-  const [elevation, setElevation] = useState(localStorage.getItem('elevation') || 'flat'); // ระดับความนูน
+  // 1. ดึง ID ของผู้ใช้คนปัจจุบันเพื่อแยกข้อมูลการตั้งค่าสีของแต่ละคน
+  const currentUserId = localStorage.getItem('currentUserId') || 'guest';
+  const storageKey = `theme_settings_${currentUserId}`;
 
+  // 2. โหลดค่าครั้งแรก (เช็คใน LocalStorage ของคนนั้นๆ ก่อน ถ้าไม่มีให้ใช้ค่า Default ตามที่กำหนด)
+  const loadInitialTheme = () => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Theme parse error", e);
+      }
+    }
+    // ค่าเริ่มต้นตามภาพ (สว่าง, ฟอนต์ Serif, สีแอป/ขอบเหลืองส้ม, แบนราบ)
+    return {
+      themeMode: 'light',
+      accentColor: '#F59E0B', 
+      transparency: '20',
+      appBg: 'default',
+      cardBg: '#FFFFFF',
+      textColor: 'default',
+      borderColor: '#F59E0B',
+      fontFamily: 'serif',
+      elevation: 'flat'
+    };
+  };
+
+  const initialConfig = loadInitialTheme();
+
+  // 3. กำหนด State จากค่าเริ่มต้นที่ดึงมาได้
+  const [themeMode, setThemeMode] = useState(initialConfig.themeMode);
+  const [accentColor, setAccentColor] = useState(initialConfig.accentColor);
+  const [transparency, setTransparency] = useState(initialConfig.transparency);
+  
+  const [appBg, setAppBg] = useState(initialConfig.appBg);
+  const [cardBg, setCardBg] = useState(initialConfig.cardBg);
+  const [textColor, setTextColor] = useState(initialConfig.textColor);
+  
+  const [borderColor, setBorderColor] = useState(initialConfig.borderColor);
+  const [fontFamily, setFontFamily] = useState(initialConfig.fontFamily);
+  const [elevation, setElevation] = useState(initialConfig.elevation);
+
+  // 4. เอฟเฟกต์ทำงานเมื่อมีการเปลี่ยนค่า และบันทึกลงเครื่องอัตโนมัติ
   useEffect(() => {
-    localStorage.setItem('themeMode', themeMode);
-    localStorage.setItem('accentColor', accentColor);
-    localStorage.setItem('transparency', transparency);
-    localStorage.setItem('appBg', appBg);
-    localStorage.setItem('cardBg', cardBg);
-    localStorage.setItem('textColor', textColor);
-    localStorage.setItem('borderColor', borderColor);
-    localStorage.setItem('fontFamily', fontFamily);
-    localStorage.setItem('elevation', elevation);
+    // บันทึกค่าลง LocalStorage (แยกตาม ID คนใช้งาน)
+    const newConfig = {
+      themeMode, accentColor, transparency, appBg, cardBg, textColor, borderColor, fontFamily, elevation
+    };
+    localStorage.setItem(storageKey, JSON.stringify(newConfig));
 
+    // ประมวลผลและนำไปปรับแต่ง CSS Variables
     const root = document.documentElement;
 
     let defaultAppBg = themeMode === 'light' ? '#F3F4F6' : '#090A0F';
@@ -74,20 +105,23 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--nav-shadow', '0 4px 20px rgba(0,0,0,0.15)');
       root.style.setProperty('--card-shadow', '0 10px 30px rgba(0,0,0,0.2)');
     } else if (elevation === 'floating') {
-      // นูนแบบลอยตัวสูง (Neumorphism / Extreme Shadow)
       const shadowColor = themeMode === 'light' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.8)';
       root.style.setProperty('--nav-shadow', `0 10px 40px ${shadowColor}`);
       root.style.setProperty('--card-shadow', `0 20px 50px ${shadowColor}`);
     }
 
+    // Glassmorphism Transparency
     const opacity = (transparency / 100).toFixed(2);
-    const rgb = hexToRgb(finalCardBg);
+    let rgbSource = finalCardBg;
+    if (!rgbSource.startsWith('#')) rgbSource = defaultCardBg; // ป้องกันการดึงค่า Gradient ไปคำนวณ RGB
+    const rgb = hexToRgb(rgbSource);
     root.style.setProperty('--glass-surface', `rgba(${rgb}, ${opacity})`);
     
+    // ไอคอนและส่วนตกแต่ง
     root.style.setProperty('--icon-active', accentColor);
     root.style.setProperty('--icon-inactive', themeMode === 'light' ? '#9CA3AF' : '#6B7280');
 
-  }, [themeMode, accentColor, transparency, appBg, cardBg, textColor, borderColor, fontFamily, elevation]);
+  }, [themeMode, accentColor, transparency, appBg, cardBg, textColor, borderColor, fontFamily, elevation, storageKey]);
 
   return (
     <ThemeContext.Provider value={{ 
