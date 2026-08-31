@@ -47,6 +47,19 @@ export const deleteUserDetail = async (itemId) => {
 };
 
 
+export const checkUsername = async (username) => {
+  try {
+    const res = await fetch(`${API_URL}/api/check-username`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('Error checking username:', error);
+    return { success: false, available: false };
+  }
+};
 // ... (โค้ดเดิมด้านบนคงไว้) ...
 
 // ในไฟล์ src/utils/apiProfile.js
