@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, ArrowRight, ShieldAlert, Loader2, Calendar, Globe, Users, Fingerprint, Mail, Calculator } from 'lucide-react';
-import { registerBasicUser, fetchReferenceData } from '../utils/apiProfile';
+import { ArrowLeft, User, Lock, ArrowRight, ShieldAlert, Loader2, Calendar, Globe, Users, Fingerprint, Mail, Calculator, CheckCircle2, XCircle } from 'lucide-react';
+import { registerBasicUser, fetchReferenceData, checkUsername } from '../utils/apiProfile';
 
 export default function RegisterBasic({ onBack, onRegisterSuccess }) {
   const [formData, setFormData] = useState({ 
@@ -26,6 +26,10 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // State ตรวจสอบ Username ซ้ำ
+  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken', 'invalid'
+  const [usernameMessage, setUsernameMessage] = useState('');
 
   // ข้อมูลสำหรับ Dropdown วันเกิดไทย
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -67,7 +71,47 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
       setFormData(prev => ({ ...prev, dob: `${standardYear}-${standardMonth}-${standardDay}` }));
     }
   }, [thaiDay, thaiMonth, thaiYear, dateMode]);
-const handleSubmit = async (e) => {
+
+  // ระบบเช็ก Username ทันทีที่พิมพ์ (Debounce)
+  useEffect(() => {
+    const currentUsername = formData.username;
+    
+    if (!currentUsername) {
+      setUsernameStatus('');
+      setUsernameMessage('');
+      return;
+    }
+
+    if (currentUsername.length < 6) {
+      setUsernameStatus('invalid');
+      setUsernameMessage('ชื่อผู้ใช้ต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    setUsernameMessage('กำลังตรวจสอบ...');
+
+    // หน่วงเวลา 500ms ป้องกันการยิง API ถี่เกินไป
+    const timeoutId = setTimeout(async () => {
+      const result = await checkUsername(currentUsername);
+      if (result.success) {
+        if (result.available) {
+          setUsernameStatus('available');
+          setUsernameMessage('ชื่อผู้ใช้นี้สามารถใช้งานได้');
+        } else {
+          setUsernameStatus('taken');
+          setUsernameMessage('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
+        }
+      } else {
+        setUsernameStatus('invalid');
+        setUsernameMessage('ไม่สามารถตรวจสอบได้ในขณะนี้');
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.username]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -78,6 +122,11 @@ const handleSubmit = async (e) => {
     if (formData.username.length < 6) {
       return setError('INVALID INPUT: ชื่อผู้ใช้ต้องมีอย่างน้อย 6 ตัวอักษร');
     }
+
+    if (usernameStatus === 'taken') {
+      return setError('INVALID INPUT: ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่');
+    }
+
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
     if (!passwordRegex.test(formData.password)) {
       return setError('WEAK PASSWORD: รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และประกอบด้วยตัวอักษรผสมตัวเลข');
@@ -90,7 +139,6 @@ const handleSubmit = async (e) => {
       return setError('VERIFICATION FAILED: คำตอบคณิตศาสตร์ไม่ถูกต้อง (Bot Check)');
     }
 
-    // เช็คว่าได้ระบุวันเกิดหรือยัง
     if (!formData.dob) {
       return setError('MISSING DATA: กรุณาระบุวันเกิดให้ครบถ้วน');
     }
@@ -100,7 +148,6 @@ const handleSubmit = async (e) => {
     try {
       const data = await registerBasicUser(formData);
       if (data.success) {
-        // ลงทะเบียนสำเร็จ แจ้งเตือนผู้ใช้ และพาดับไปหน้า Login (หน้าก่อนหน้า)
         alert('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านของคุณ');
         onBack(); 
       }
@@ -115,7 +162,7 @@ const handleSubmit = async (e) => {
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] transition-all duration-300 overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
       
       <div className="sticky top-0 z-40 flex items-center px-6 py-4 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--border-color)] transition-all" style={{ boxShadow: 'var(--nav-shadow)' }}>
-        <button onClick={onBack} className="text-[var(--text-heading)] hover:text-[var(--icon-active)] transition p-2 -ml-2 rounded-lg">
+        <button type="button" onClick={onBack} className="text-[var(--text-heading)] hover:text-[var(--icon-active)] transition p-2 -ml-2 rounded-lg">
           <ArrowLeft size={24} />
         </button>
         <span className="ml-4 text-xs text-[var(--text-heading)] tracking-widest font-bold">SECURE REGISTRATION</span>
@@ -139,12 +186,31 @@ const handleSubmit = async (e) => {
           )}
 
           <div className="space-y-3">
-            {/* Username */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <User size={18} className="text-[var(--icon-inactive)] group-focus-within:text-[var(--icon-active)] transition-colors" />
+            {/* Username แบบตรวจสอบ Real-time */}
+            <div className="space-y-1">
+              <div className={`relative group border ${usernameStatus === 'available' ? 'border-green-500' : usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-xl bg-[var(--card-bg)] transition-colors focus-within:border-[var(--icon-active)]`}>
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User size={18} className="text-[var(--icon-inactive)] group-focus-within:text-[var(--icon-active)] transition-colors" />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="USERNAME (ขั้นต่ำ 6 ตัวอักษร)" 
+                  value={formData.username} 
+                  onChange={(e) => setFormData({...formData, username: e.target.value})} 
+                  className="w-full bg-transparent text-[var(--text-heading)] rounded-xl pl-12 pr-10 py-3 outline-none text-sm" 
+                  required 
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  {usernameStatus === 'checking' && <Loader2 size={16} className="animate-spin text-[var(--icon-inactive)]" />}
+                  {usernameStatus === 'available' && <CheckCircle2 size={16} className="text-green-500" />}
+                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <XCircle size={16} className="text-red-500" />}
+                </div>
               </div>
-              <input type="text" placeholder="USERNAME (ขั้นต่ำ 6 ตัวอักษร)" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-xl pl-12 pr-4 py-3 outline-none focus:border-[var(--icon-active)] transition-all text-sm" required />
+              {usernameMessage && (
+                <p className={`text-[10px] pl-2 ${usernameStatus === 'available' ? 'text-green-500' : 'text-red-500'}`}>
+                  {usernameMessage}
+                </p>
+              )}
             </div>
 
             {/* Country & Gender */}
@@ -249,7 +315,7 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          <button type="submit" disabled={isLoading || isDataLoading} className="w-full mt-6 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] font-bold tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 hover:bg-[var(--icon-active)] hover:text-white" style={{ boxShadow: 'var(--card-shadow)' }}>
+          <button type="submit" disabled={isLoading || isDataLoading || usernameStatus === 'taken'} className="w-full mt-6 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] font-bold tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 hover:bg-[var(--icon-active)] hover:text-white" style={{ boxShadow: 'var(--card-shadow)' }}>
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'INITIALIZE ACCOUNT'} 
             {!isLoading && <ArrowRight size={18} />}
           </button>
