@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield } from 'lucide-react';
-// [พัฒนาเพิ่ม] นำเข้า API ดึงข้อมูลและอัปเดตข้อมูล
+import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2 } from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
 
 export default function Profile({ onBack, onLogout }) {
-  // [ฟังก์ชันเดิม] เคลียร์ค่าว่างเพื่อรอรับข้อมูลจริงจาก DB ห้ามใส่ Mock Data
   const [userData, setUserData] = useState({
     username: '', globalId: '', nationality: '', gender: '', dob: '', idCard: '', referrer: '',
     firstName: '', lastName: '', phone: '', email: '',
     isPhoneVerified: false, isEmailVerified: false, avatarUrl: '', coverUrl: ''
   });
+
+  // เพิ่ม State ดักจับสถานะกำลังดึงข้อมูล
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editField, setEditField] = useState(''); 
@@ -19,7 +20,6 @@ export default function Profile({ onBack, onLogout }) {
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
-  // [พัฒนาเพิ่ม] ดึงข้อมูลจริงจากฐานข้อมูลเมื่อเปิดหน้าจอ
   useEffect(() => {
     const userId = localStorage.getItem('currentUserId');
     if (userId) {
@@ -28,6 +28,7 @@ export default function Profile({ onBack, onLogout }) {
   }, []);
 
   const loadProfileData = async (userId) => {
+    setIsLoadingProfile(true);
     try {
       const data = await fetchUserProfile(userId);
       if (data.success) {
@@ -35,6 +36,8 @@ export default function Profile({ onBack, onLogout }) {
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
@@ -47,15 +50,11 @@ export default function Profile({ onBack, onLogout }) {
     return score;
   };
 
-  // [ฟังก์ชันเดิม] ระบบ Logout ที่ใช้งานได้จริง
   const handleLogoutClick = () => {
     localStorage.clear();
     sessionStorage.clear();
-    if (onLogout) {
-      onLogout();
-    } else {
-      window.location.href = '/'; 
-    }
+    if (onLogout) onLogout();
+    else window.location.href = '/'; 
   };
 
   const openEditModal = (field) => {
@@ -66,7 +65,6 @@ export default function Profile({ onBack, onLogout }) {
     setIsModalOpen(true);
   };
 
-  // [พัฒนาเพิ่ม] บันทึกข้อมูลจริงผ่าน API
   const handleSaveEdit = async () => {
     setIsSaving(true);
     const userId = localStorage.getItem('currentUserId');
@@ -75,16 +73,13 @@ export default function Profile({ onBack, onLogout }) {
     if (editField === 'name') {
       payload.firstName = editForm.val1;
       payload.lastName = editForm.val2;
-    } else if (editField === 'phone') {
-      payload.phone = editForm.val1;
-    } else if (editField === 'email') {
-      payload.email = editForm.val1;
-    }
+    } else if (editField === 'phone') payload.phone = editForm.val1;
+    else if (editField === 'email') payload.email = editForm.val1;
 
     try {
       const result = await updateUserProfile(payload);
       if (result.success) {
-        await loadProfileData(userId); // โหลดข้อมูลใหม่เพื่อรีเฟรชหน้าจอ
+        await loadProfileData(userId); 
         setIsModalOpen(false);
       }
     } catch (error) {
@@ -94,7 +89,6 @@ export default function Profile({ onBack, onLogout }) {
     }
   };
 
-  // [ฟังก์ชันเดิม] ระบบอัปโหลดรูปภาพ (อ่านไฟล์จริง และแปลงส่ง API)
   const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -102,10 +96,8 @@ export default function Profile({ onBack, onLogout }) {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result;
-      // พรีวิวรูปทันที
       setUserData(prev => ({ ...prev, [type === 'avatar' ? 'avatarUrl' : 'coverUrl']: base64String }));
       
-      // [พัฒนาเพิ่ม] ส่งรูปขึ้น Server
       const userId = localStorage.getItem('currentUserId');
       if (userId) {
         await uploadUserImage({ userId, type, imageBase64: base64String });
@@ -113,6 +105,15 @@ export default function Profile({ onBack, onLogout }) {
     };
     reader.readAsDataURL(file);
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--icon-active)]">
+        <Loader2 size={40} className="animate-spin mb-4" />
+        <p className="font-bold tracking-widest text-sm text-[var(--text-heading)]">LOADING PROFILE...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
@@ -128,7 +129,6 @@ export default function Profile({ onBack, onLogout }) {
           <button className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] p-2 transition">
             <Settings size={20} />
           </button>
-          {/* เรียกใช้ฟังก์ชัน Logout จริง */}
           <button onClick={handleLogoutClick} className="text-[var(--icon-inactive)] hover:text-red-500 p-2 transition">
             <LogOut size={20} />
           </button>
@@ -159,7 +159,7 @@ export default function Profile({ onBack, onLogout }) {
         </div>
 
         <div className="px-8 mt-12 mb-6">
-          <h2 className="text-2xl font-bold text-[var(--text-heading)]">{userData.username || 'Loading...'}</h2>
+          <h2 className="text-2xl font-bold text-[var(--text-heading)]">{userData.username}</h2>
           <div className="flex items-center gap-2 mt-1">
             <ShieldCheck size={16} className="text-orange-500" />
             <span className="text-xs text-orange-500 font-medium">@{userData.username} • Level 1</span>
@@ -202,7 +202,7 @@ export default function Profile({ onBack, onLogout }) {
               </div>
               <div className="col-span-2">
                 <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1">ผู้แนะนำ</p>
-                <p className="text-xs font-medium text-[var(--text-heading)]">{userData.referrer || 'ไม่มีผู้แนะนำ'}</p>
+                <p className="text-xs font-medium text-[var(--text-heading)]">{userData.referrer}</p>
               </div>
             </div>
           </div>
@@ -218,7 +218,7 @@ export default function Profile({ onBack, onLogout }) {
                 <div>
                   <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1">ชื่อ - นามสกุล</p>
                   <p className="text-sm font-medium text-[var(--text-heading)]">
-                    {userData.firstName ? `${userData.firstName} ${userData.lastName}` : <span className="text-red-400 text-xs italic">เพิ่มข้อมูล</span>}
+                    {userData.firstName ? `${userData.firstName} ${userData.lastName}` : <span className="text-red-400 text-xs italic">ยังไม่ระบุข้อมูล</span>}
                   </p>
                 </div>
                 <button onClick={() => openEditModal('name')} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition rounded-lg bg-[var(--app-bg)] border border-[var(--border-color)]">
@@ -233,7 +233,7 @@ export default function Profile({ onBack, onLogout }) {
                   </p>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-[var(--text-heading)]">
-                      {userData.phone || <span className="text-red-400 text-xs italic">เพิ่มเบอร์โทรศัพท์</span>}
+                      {userData.phone || <span className="text-red-400 text-xs italic">ยังไม่ระบุข้อมูล</span>}
                     </p>
                     {userData.phone && (
                       userData.isPhoneVerified 
@@ -254,7 +254,7 @@ export default function Profile({ onBack, onLogout }) {
                   </p>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-[var(--text-heading)]">
-                      {userData.email || <span className="text-red-400 text-xs italic">เพิ่มอีเมล</span>}
+                      {userData.email || <span className="text-red-400 text-xs italic">ยังไม่ระบุข้อมูล</span>}
                     </p>
                     {userData.email && (
                       userData.isEmailVerified 
