@@ -8,27 +8,27 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     country: '', gender: '', dob: '', referrer: '' 
   });
   
-  // State ไม่มีผู้แนะนำ
   const [noReferrer, setNoReferrer] = useState(false);
-
   const [countries, setCountries] = useState([]);
   const [genders, setGenders] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
   const [botAnswer, setBotAnswer] = useState('');
-
   const [dateMode, setDateMode] = useState('thai'); 
   const [thaiDay, setThaiDay] = useState('');
   const [thaiMonth, setThaiMonth] = useState('');
   const [thaiYear, setThaiYear] = useState('');
-
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [usernameStatus, setUsernameStatus] = useState(''); 
   const [usernameMessage, setUsernameMessage] = useState('');
+
+  // เพิ่ม State สำหรับเก็บชื่อที่ดึงมาได้
+  const [referrerStatus, setReferrerStatus] = useState(''); 
+  const [referrerName, setReferrerName] = useState('');
+  const [referrerMessage, setReferrerMessage] = useState('');
 
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const thaiMonths = [
@@ -42,7 +42,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
   useEffect(() => {
     setNum1(Math.floor(Math.random() * 10) + 1);
     setNum2(Math.floor(Math.random() * 10) + 1);
-
     const loadData = async () => {
       try {
         const data = await fetchReferenceData();
@@ -70,22 +69,18 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
 
   useEffect(() => {
     const currentUsername = formData.username;
-    
     if (!currentUsername) {
       setUsernameStatus('');
       setUsernameMessage('');
       return;
     }
-
     if (currentUsername.length < 6) {
       setUsernameStatus('invalid');
       setUsernameMessage('ชื่อผู้ใช้ต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
-
     setUsernameStatus('checking');
     setUsernameMessage('กำลังตรวจสอบ...');
-
     const timeoutId = setTimeout(async () => {
       const result = await checkUsername(currentUsername);
       if (result.success) {
@@ -101,46 +96,66 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
         setUsernameMessage('ไม่สามารถตรวจสอบได้ในขณะนี้');
       }
     }, 500);
-
     return () => clearTimeout(timeoutId);
   }, [formData.username]);
+
+  // ระบบตรวจสอบผู้แนะนำ พร้อมดึงชื่อมาแสดง
+  useEffect(() => {
+    const currentReferrer = formData.referrer;
+    if (noReferrer || !currentReferrer) {
+      setReferrerStatus('');
+      setReferrerName('');
+      setReferrerMessage('');
+      return;
+    }
+    setReferrerStatus('checking');
+    setReferrerMessage('กำลังค้นหาผู้แนะนำ...');
+    
+    const timeoutId = setTimeout(async () => {
+      const result = await checkUsername(currentReferrer);
+      if (result.success) {
+        if (!result.available) {
+          setReferrerStatus('valid');
+          // ดึงชื่อที่ API ส่งมาให้ หรือใช้ชื่อเดิมถ้าไม่มี
+          const displayName = result.userData?.displayName || currentReferrer;
+          setReferrerName(displayName);
+          setReferrerMessage(`✅ ผู้แนะนำ: ${displayName}`);
+        } else {
+          setReferrerStatus('invalid');
+          setReferrerName('');
+          setReferrerMessage('❌ ไม่พบชื่อผู้ใช้นี้ในระบบ');
+        }
+      } else {
+        setReferrerStatus('invalid');
+        setReferrerName('');
+        setReferrerMessage('ไม่สามารถตรวจสอบได้ในขณะนี้');
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.referrer, noReferrer]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // ตรวจสอบระบบผู้แนะนำ
-    if (!noReferrer && !formData.referrer) {
-      return setError('MISSING DATA: กรุณาระบุชื่อผู้แนะนำ หรือติ๊กเลือก "ไม่มีผู้แนะนำ"');
+    if (!noReferrer) {
+      if (!formData.referrer) {
+        return setError('MISSING DATA: กรุณาระบุชื่อผู้แนะนำ หรือติ๊กเลือก "ไม่มีผู้แนะนำ"');
+      }
+      if (referrerStatus !== 'valid') {
+        return setError('INVALID REFERRER: ไม่พบชื่อผู้แนะนำที่คุณระบุในระบบ');
+      }
     }
     
-    if (!formData.country || !formData.gender) {
-      return setError('MISSING DATA: กรุณาเลือกประเทศและเพศของคุณ');
-    }
-    
-    if (formData.username.length < 6) {
-      return setError('INVALID INPUT: ชื่อผู้ใช้ต้องมีอย่างน้อย 6 ตัวอักษร');
-    }
-
-    if (usernameStatus === 'taken') {
-      return setError('INVALID INPUT: ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่');
-    }
+    if (!formData.country || !formData.gender) return setError('MISSING DATA: กรุณาเลือกประเทศและเพศของคุณ');
+    if (formData.username.length < 6) return setError('INVALID INPUT: ชื่อผู้ใช้ต้องมีอย่างน้อย 6 ตัวอักษร');
+    if (usernameStatus === 'taken') return setError('INVALID INPUT: ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่');
 
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    if (!passwordRegex.test(formData.password)) {
-      return setError('WEAK PASSWORD: รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และประกอบด้วยตัวอักษรผสมตัวเลข');
-    }
-    if (formData.password !== formData.confirmPassword) {
-      return setError('ENCRYPTION MISMATCH: รหัสผ่านไม่ตรงกัน');
-    }
-
-    if (parseInt(botAnswer) !== num1 + num2) {
-      return setError('VERIFICATION FAILED: คำตอบคณิตศาสตร์ไม่ถูกต้อง (Bot Check)');
-    }
-
-    if (!formData.dob) {
-      return setError('MISSING DATA: กรุณาระบุวันเกิดให้ครบถ้วน');
-    }
+    if (!passwordRegex.test(formData.password)) return setError('WEAK PASSWORD: รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และประกอบด้วยตัวอักษรผสมตัวเลข');
+    if (formData.password !== formData.confirmPassword) return setError('ENCRYPTION MISMATCH: รหัสผ่านไม่ตรงกัน');
+    if (parseInt(botAnswer) !== num1 + num2) return setError('VERIFICATION FAILED: คำตอบคณิตศาสตร์ไม่ถูกต้อง (Bot Check)');
+    if (!formData.dob) return setError('MISSING DATA: กรุณาระบุวันเกิดให้ครบถ้วน');
 
     setIsLoading(true);
     
@@ -159,7 +174,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] transition-all duration-300 overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
-      
       <div className="sticky top-0 z-40 flex items-center px-6 py-4 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--border-color)] transition-all" style={{ boxShadow: 'var(--nav-shadow)' }}>
         <button type="button" onClick={onBack} className="text-[var(--text-heading)] hover:text-[var(--icon-active)] transition p-2 -ml-2 rounded-lg">
           <ArrowLeft size={24} />
@@ -168,7 +182,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
       </div>
 
       <div className="flex-1 flex flex-col px-8 pb-20 max-w-md mx-auto w-full">
-        
         <div className="mb-8 text-center flex flex-col items-center mt-6">
           <div className="w-16 h-16 bg-[var(--card-bg)] border border-[var(--icon-active)] rounded-full flex items-center justify-center mb-4" style={{ boxShadow: '0 0 15px var(--icon-active)' }}>
             <ShieldAlert size={28} className="text-[var(--icon-active)]" />
@@ -212,7 +225,7 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
               )}
             </div>
 
-            {/* ระบบผู้แนะนำ (Referrer) */}
+            {/* ระบบผู้แนะนำ (Referrer) พร้อมเรดาร์แสดงชื่อ */}
             <div className="space-y-1 pb-1">
               <div className="flex items-center justify-between px-1 mb-1">
                  <span className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-widest flex items-center gap-1">
@@ -224,7 +237,7 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
                  </button>
               </div>
               
-              <div className={`relative group border border-[var(--border-color)] rounded-xl bg-[var(--card-bg)] transition-all overflow-hidden ${noReferrer ? 'opacity-30 pointer-events-none h-0 border-0' : 'h-[46px] focus-within:border-[var(--icon-active)]'}`}>
+              <div className={`relative group border ${referrerStatus === 'valid' ? 'border-green-500' : referrerStatus === 'invalid' ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-xl bg-[var(--card-bg)] transition-all overflow-hidden ${noReferrer ? 'opacity-30 pointer-events-none h-0 border-0' : 'h-[46px] focus-within:border-[var(--icon-active)]'}`}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <UserPlus size={18} className="text-[var(--icon-inactive)] group-focus-within:text-[var(--icon-active)] transition-colors" />
                 </div>
@@ -233,10 +246,20 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
                   placeholder="USERNAME ผู้แนะนำ" 
                   value={formData.referrer} 
                   onChange={(e) => setFormData({...formData, referrer: e.target.value})} 
-                  className="w-full bg-transparent text-[var(--text-heading)] rounded-xl pl-12 pr-4 py-3 outline-none text-sm" 
+                  className="w-full bg-transparent text-[var(--text-heading)] rounded-xl pl-12 pr-10 py-3 outline-none text-sm" 
                   disabled={noReferrer}
                 />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  {referrerStatus === 'checking' && <Loader2 size={16} className="animate-spin text-[var(--icon-inactive)]" />}
+                  {referrerStatus === 'valid' && <CheckCircle2 size={16} className="text-green-500" />}
+                  {referrerStatus === 'invalid' && <XCircle size={16} className="text-red-500" />}
+                </div>
               </div>
+              {!noReferrer && referrerMessage && (
+                <p className={`text-[10px] pl-2 ${referrerStatus === 'valid' ? 'text-green-500' : 'text-red-500'}`}>
+                  {referrerMessage}
+                </p>
+              )}
             </div>
 
             {/* Country & Gender */}
@@ -291,7 +314,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
                   <button type="button" onClick={() => setDateMode('intl')} className={`text-[10px] px-3 py-1 rounded transition-colors ${dateMode === 'intl' ? 'bg-[var(--icon-active)] text-white' : 'text-[var(--icon-inactive)]'}`}>สากล</button>
                 </div>
               </div>
-
               {dateMode === 'intl' ? (
                 <input 
                   type="date" 
@@ -324,7 +346,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
               </div>
               <input type="password" placeholder="ENCRYPTION KEY (อักษรผสมตัวเลข 8+ ตัว)" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-xl pl-12 pr-4 py-3 outline-none focus:border-[var(--icon-active)] transition-all text-sm tracking-widest" required />
             </div>
-
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock size={18} className="text-[var(--icon-inactive)] group-focus-within:text-[var(--icon-active)] transition-colors" />
@@ -347,17 +368,14 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
           </button>
         </form>
 
-        {/* Other Registration Methods */}
         <div className="mt-8 flex flex-col gap-4">
           <div className="relative flex items-center justify-center">
             <span className="absolute bg-[var(--app-bg)] px-3 text-[var(--icon-inactive)] text-[10px] tracking-widest uppercase">OR REGISTER WITH</span>
             <div className="w-full border-t border-[var(--border-color)]"></div>
           </div>
-          
           <button type="button" className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] py-3 rounded-xl flex items-center justify-center gap-3 transition-all hover:border-[var(--icon-active)] text-sm">
              <Mail size={18} className="text-red-500" /> Gmail Account
           </button>
-          
           <button type="button" className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] py-3 rounded-xl flex items-center justify-center gap-3 transition-all hover:border-[var(--icon-active)] text-sm">
              <Fingerprint size={18} className="text-green-500" /> Biometrics (Face ID / Touch ID)
           </button>
