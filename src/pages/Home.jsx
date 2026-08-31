@@ -42,9 +42,9 @@ export default function Home() {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const mockFriends = [
-    { id: 1, name: 'MJ อ้วน', message: 'ส่งสลิปโอนเงินแล้วนะ', time: '12:00 PM', imageUrl: 'https://via.placeholder.com/40' },
-    { id: 2, name: 'เจน ไทย', message: 'เจอกันคืนนี้!', time: '11:15 AM', imageUrl: 'https://via.placeholder.com/40' },
-    { id: 3, name: 'Lego Home', message: 'กำลังออกแบบโครงสร้างครับ', time: '09:30 AM', imageUrl: 'https://via.placeholder.com/40' },
+    { id: 1, name: 'MJ อ้วน', message: 'ส่งสลิปโอนเงินแล้วนะ', time: '12:00 PM', imageUrl: 'https://placehold.co/40x40/png' },
+    { id: 2, name: 'เจน ไทย', message: 'เจอกันคืนนี้!', time: '11:15 AM', imageUrl: 'https://placehold.co/40x40/png' },
+    { id: 3, name: 'Lego Home', message: 'กำลังออกแบบโครงสร้างครับ', time: '09:30 AM', imageUrl: 'https://placehold.co/40x40/png' },
   ];
 
   // ==========================================

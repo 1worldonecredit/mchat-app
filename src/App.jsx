@@ -1,50 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeProvider } from './ThemeContext';
 import Login from './pages/Login';
 import RegisterBasic from './pages/RegisterBasic';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default function App() {
-  // ตรวจสอบสถานะการล็อกอินตอนเปิดแอป
   const [currentScreen, setCurrentScreen] = useState(() => {
-    return localStorage.getItem('currentUserId') ? 'home' : 'login';
+    if (localStorage.getItem('currentUserId')) return 'home';
+    if (!localStorage.getItem('isFirstTime')) return 'intro';
+    return 'login';
   });
 
   const renderScreen = () => {
-    if (currentScreen === 'login') {
+    if (currentScreen === 'intro') {
       return (
-        <Login 
-          onLoginSuccess={() => setCurrentScreen('home')} 
-          onGoToRegister={() => setCurrentScreen('register')} 
-        />
+        <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-[var(--app-bg)] p-6 text-center" style={{ fontFamily: 'var(--font-family)' }}>
+          <div className="w-24 h-24 bg-[var(--card-bg)] border border-[var(--icon-active)] rounded-full flex items-center justify-center mb-8" style={{ boxShadow: '0 0 30px var(--icon-active)' }}>
+            <Sparkles size={40} className="text-[var(--icon-active)]" />
+          </div>
+          <h1 className="text-3xl font-bold text-[var(--text-heading)] mb-4 tracking-widest">M-CHAT</h1>
+          <p className="text-[var(--icon-inactive)] text-sm mb-12 max-w-xs leading-relaxed">
+            ระบบสื่อสารและจัดการองค์กรอัจฉริยะ เชื่อมต่อทุกเครือข่ายเข้าด้วยกันอย่างปลอดภัย
+          </p>
+          <button 
+            onClick={() => {
+              localStorage.setItem('isFirstTime', 'false');
+              setCurrentScreen('login');
+            }}
+            className="w-full max-w-xs bg-[var(--icon-active)] text-white font-bold tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:scale-105"
+            style={{ boxShadow: 'var(--card-shadow)' }}
+          >
+            GET STARTED <ArrowRight size={18} />
+          </button>
+        </div>
       );
     }
-    
-    if (currentScreen === 'register') {
-      return (
-        <RegisterBasic 
-          onBack={() => setCurrentScreen('login')} 
-          // ปรับให้พาไปหน้า home (ซึ่งจะแสดงหน้า Media เป็นหน้าแรกตามที่ตั้งค่าไว้ใน Home)
-          onRegisterSuccess={() => setCurrentScreen('home')} 
-        />
-      );
-    }
-    
-    if (currentScreen === 'home') {
-      return (
-        <Home 
-          onGoToProfile={() => setCurrentScreen('profile')} 
-        />
-      );
-    }
-    
+
+    if (currentScreen === 'login') return <Login onLoginSuccess={() => setCurrentScreen('home')} onGoToRegister={() => setCurrentScreen('register')} />;
+    if (currentScreen === 'register') return <RegisterBasic onBack={() => setCurrentScreen('login')} onRegisterSuccess={() => setCurrentScreen('home')} />;
+    if (currentScreen === 'home') return <Home onGoToProfile={() => setCurrentScreen('profile')} />;
     if (currentScreen === 'profile') {
       return (
         <Profile 
           onBack={() => setCurrentScreen('home')} 
           onLogout={() => {
-            // สำคัญ: ใช้ clear() ล้างข้อมูลทั้งหมดป้องกัน ID หรือ Theme เก่าค้างจนทำให้หน้าจอหมุนติ้ว
             localStorage.clear();
             sessionStorage.clear();
             setCurrentScreen('login');
@@ -52,13 +53,8 @@ export default function App() {
         />
       );
     }
-    
     return null;
   };
 
-  return (
-    <ThemeProvider>
-      {renderScreen()}
-    </ThemeProvider>
-  );
+  return <ThemeProvider>{renderScreen()}</ThemeProvider>;
 }

@@ -28,7 +28,7 @@ export default function HomeFeed() {
         {/* Header (ไม่มีตัวหนังสือคำว่า "ตั้งค่า" หรือ "เพิ่มเติม" ใช้ Icon 3 จุดแทน) */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <img src="https://via.placeholder.com/40" className="w-10 h-10 rounded-full object-cover" alt="user" />
+            <img src="https://placehold.co/40x40/png" className="w-10 h-10 rounded-full object-cover" alt="user" />
             <div className="w-24 h-3 bg-[var(--icon-color)] opacity-20 rounded-full"></div>
           </div>
           <button className="feed-action-btn"><MoreHorizontal size={20} /></button>

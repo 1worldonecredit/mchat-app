@@ -89,3 +89,14 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
     setTimeout(() => resolve({ success: true }), 1000);
   });
 };
+
+export const fetchReferenceData = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/reference-data`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาดในการดึงข้อมูลอ้างอิง');
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
