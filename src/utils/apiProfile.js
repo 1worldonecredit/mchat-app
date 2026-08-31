@@ -86,8 +86,9 @@ export const loginUser = async (credentials) => {
     const res = await fetch(`${API_URL}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
+      body: JSON.stringify(credentials) // <-- ส่ง credentials ไปตรงๆ
     });
+    
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
     return data;
