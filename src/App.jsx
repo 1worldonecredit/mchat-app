@@ -38,9 +38,32 @@ export default function App() {
       );
     }
 
-    if (currentScreen === 'login') return <Login onLoginSuccess={() => setCurrentScreen('home')} onGoToRegister={() => setCurrentScreen('register')} />;
-    if (currentScreen === 'register') return <RegisterBasic onBack={() => setCurrentScreen('login')} onRegisterSuccess={() => setCurrentScreen('home')} />;
-    if (currentScreen === 'home') return <Home onGoToProfile={() => setCurrentScreen('profile')} />;
+    if (currentScreen === 'login') {
+      return (
+        <Login 
+          onBack={() => setCurrentScreen('intro')} 
+          onLoginSuccess={() => setCurrentScreen('home')} 
+          onRegisterClick={() => setCurrentScreen('register')} 
+          onForgotPasswordClick={() => console.log('Navigate to Forgot Password')}
+        />
+      );
+    }
+
+    if (currentScreen === 'register') {
+      return (
+        <RegisterBasic 
+          onBack={() => setCurrentScreen('login')} 
+          onRegisterSuccess={() => setCurrentScreen('login')} 
+        />
+      );
+    }
+
+    if (currentScreen === 'home') {
+      return (
+        <Home onGoToProfile={() => setCurrentScreen('profile')} />
+      );
+    }
+
     if (currentScreen === 'profile') {
       return (
         <Profile 
@@ -53,6 +76,7 @@ export default function App() {
         />
       );
     }
+
     return null;
   };
 
