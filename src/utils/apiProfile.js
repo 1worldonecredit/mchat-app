@@ -1,19 +1,4 @@
-// src/utils/apiProfile.js
-// ลบคำว่า import.meta.env.VITE_API_URL ออกไปก่อนเพื่อบังคับให้ชี้ไปที่โดเมนจริง
-const API_URL = 'https://mchatapi.9plus.app';
 
-// 1. ดึงข้อมูลหลักจาก API ของคุณ (Profile หลัก)
-export const fetchUserProfile = async (userId) => {
-  try {
-    const res = await fetch(`${API_URL}/api/profile/${userId}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || 'ไม่พบข้อมูล');
-    return data.profile; // ดึงก้อน profile ที่ Backend คุณจัดมาให้
-  } catch (error) {
-    console.error('Fetch profile error:', error);
-    return null;
-  }
-};
 
 // 2. ดึงข้อมูลการ์ดย่อย (Details) เช่น การทำงาน, การศึกษา
 export const fetchUserDetails = async (userId) => {
