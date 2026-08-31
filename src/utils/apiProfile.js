@@ -1,3 +1,7 @@
+// src/utils/apiProfile.js
+// ลบคำว่า import.meta.env.VITE_API_URL ออกไปก่อนเพื่อบังคับให้ชี้ไปที่โดเมนจริง
+const API_URL = 'https://mchatapi.9plus.app';
+
 
 
 // 2. ดึงข้อมูลการ์ดย่อย (Details) เช่น การทำงาน, การศึกษา
