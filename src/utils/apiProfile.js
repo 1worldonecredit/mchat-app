@@ -50,19 +50,17 @@ export const deleteUserDetail = async (itemId) => {
 // ... (โค้ดเดิมด้านบนคงไว้) ...
 
 // ในไฟล์ src/utils/apiProfile.js
-
 export const registerBasicUser = async (formData) => {
   try {
     const res = await fetch(`${API_URL}/api/register/basic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // สำคัญมาก: ส่ง formData ไปตรงๆ ไม่ต้องใส่ปีกกาครอบอีกชั้น
-      body: JSON.stringify(formData) 
+      body: JSON.stringify(formData) // <-- บรรทัดนี้สำคัญมาก ห้ามมี { } ครอบ formData
     });
     
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
-    return data; 
+    if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
+    return data;
   } catch (error) {
     throw error;
   }
