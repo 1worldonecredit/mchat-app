@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, ArrowRight, ShieldAlert, Loader2, Calendar, Globe, Users, Fingerprint, Mail, Calculator, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, User, Lock, ArrowRight, ShieldAlert, Loader2, Calendar, Globe, Users, Fingerprint, Mail, Calculator, CheckCircle2, XCircle, UserPlus, CheckSquare, Square } from 'lucide-react';
 import { registerBasicUser, fetchReferenceData, checkUsername } from '../utils/apiProfile';
 
 export default function RegisterBasic({ onBack, onRegisterSuccess }) {
   const [formData, setFormData] = useState({ 
     username: '', password: '', confirmPassword: '', 
-    country: '', gender: '', dob: '' 
+    country: '', gender: '', dob: '', referrer: '' 
   });
   
-  // State ข้อมูล Database
+  // State ไม่มีผู้แนะนำ
+  const [noReferrer, setNoReferrer] = useState(false);
+
   const [countries, setCountries] = useState([]);
   const [genders, setGenders] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   
-  // State ป้องกัน Bot
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
   const [botAnswer, setBotAnswer] = useState('');
 
-  // State สำหรับ Date Picker แบบไทย/สากล
-  const [dateMode, setDateMode] = useState('thai'); // 'thai' หรือ 'intl'
+  const [dateMode, setDateMode] = useState('thai'); 
   const [thaiDay, setThaiDay] = useState('');
   const [thaiMonth, setThaiMonth] = useState('');
   const [thaiYear, setThaiYear] = useState('');
@@ -27,11 +27,9 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // State ตรวจสอบ Username ซ้ำ
-  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken', 'invalid'
+  const [usernameStatus, setUsernameStatus] = useState(''); 
   const [usernameMessage, setUsernameMessage] = useState('');
 
-  // ข้อมูลสำหรับ Dropdown วันเกิดไทย
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const thaiMonths = [
     { v: 1, n: 'มกราคม' }, { v: 2, n: 'กุมภาพันธ์' }, { v: 3, n: 'มีนาคม' }, { v: 4, n: 'เมษายน' },
@@ -39,10 +37,9 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     { v: 9, n: 'กันยายน' }, { v: 10, n: 'ตุลาคม' }, { v: 11, n: 'พฤศจิกายน' }, { v: 12, n: 'ธันวาคม' }
   ];
   const currentYearBE = new Date().getFullYear() + 543;
-  const yearsBE = Array.from({ length: 100 }, (_, i) => currentYearBE - i); // ย้อนหลัง 100 ปี
+  const yearsBE = Array.from({ length: 100 }, (_, i) => currentYearBE - i); 
 
   useEffect(() => {
-    // สุ่มตัวเลขป้องกันบอท
     setNum1(Math.floor(Math.random() * 10) + 1);
     setNum2(Math.floor(Math.random() * 10) + 1);
 
@@ -62,7 +59,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     loadData();
   }, []);
 
-  // เมื่อเลือกวันเกิดแบบไทยครบ แปลงเป็น ค.ศ. (YYYY-MM-DD) ยัดใส่ formData อัตโนมัติ
   useEffect(() => {
     if (dateMode === 'thai' && thaiDay && thaiMonth && thaiYear) {
       const standardYear = thaiYear - 543;
@@ -72,7 +68,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     }
   }, [thaiDay, thaiMonth, thaiYear, dateMode]);
 
-  // ระบบเช็ก Username ทันทีที่พิมพ์ (Debounce)
   useEffect(() => {
     const currentUsername = formData.username;
     
@@ -91,7 +86,6 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     setUsernameStatus('checking');
     setUsernameMessage('กำลังตรวจสอบ...');
 
-    // หน่วงเวลา 500ms ป้องกันการยิง API ถี่เกินไป
     const timeoutId = setTimeout(async () => {
       const result = await checkUsername(currentUsername);
       if (result.success) {
@@ -114,6 +108,11 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // ตรวจสอบระบบผู้แนะนำ
+    if (!noReferrer && !formData.referrer) {
+      return setError('MISSING DATA: กรุณาระบุชื่อผู้แนะนำ หรือติ๊กเลือก "ไม่มีผู้แนะนำ"');
+    }
     
     if (!formData.country || !formData.gender) {
       return setError('MISSING DATA: กรุณาเลือกประเทศและเพศของคุณ');
@@ -186,7 +185,7 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
           )}
 
           <div className="space-y-3">
-            {/* Username แบบตรวจสอบ Real-time */}
+            {/* Username */}
             <div className="space-y-1">
               <div className={`relative group border ${usernameStatus === 'available' ? 'border-green-500' : usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-xl bg-[var(--card-bg)] transition-colors focus-within:border-[var(--icon-active)]`}>
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -211,6 +210,33 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
                   {usernameMessage}
                 </p>
               )}
+            </div>
+
+            {/* ระบบผู้แนะนำ (Referrer) */}
+            <div className="space-y-1 pb-1">
+              <div className="flex items-center justify-between px-1 mb-1">
+                 <span className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-widest flex items-center gap-1">
+                   <UserPlus size={12} /> ผู้แนะนำ (Referrer)
+                 </span>
+                 <button type="button" onClick={() => { setNoReferrer(!noReferrer); setFormData({...formData, referrer: ''}); }} className="flex items-center gap-2 text-[var(--icon-inactive)] hover:text-[var(--text-heading)] transition-colors text-xs font-medium">
+                   {noReferrer ? <CheckSquare size={16} className="text-[var(--icon-active)]" /> : <Square size={16} />}
+                   ไม่มีผู้แนะนำ
+                 </button>
+              </div>
+              
+              <div className={`relative group border border-[var(--border-color)] rounded-xl bg-[var(--card-bg)] transition-all overflow-hidden ${noReferrer ? 'opacity-30 pointer-events-none h-0 border-0' : 'h-[46px] focus-within:border-[var(--icon-active)]'}`}>
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <UserPlus size={18} className="text-[var(--icon-inactive)] group-focus-within:text-[var(--icon-active)] transition-colors" />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="USERNAME ผู้แนะนำ" 
+                  value={formData.referrer} 
+                  onChange={(e) => setFormData({...formData, referrer: e.target.value})} 
+                  className="w-full bg-transparent text-[var(--text-heading)] rounded-xl pl-12 pr-4 py-3 outline-none text-sm" 
+                  disabled={noReferrer}
+                />
+              </div>
             </div>
 
             {/* Country & Gender */}
