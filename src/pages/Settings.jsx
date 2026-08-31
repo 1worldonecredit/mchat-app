@@ -1,5 +1,5 @@
 import { ArrowLeft, Sun, Moon, Droplet, LayoutTemplate, Type, Box, Layers, Brush } from 'lucide-react';
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { ThemeContext } from '../ThemeContext';
 
 export default function Settings({ onBack }) {
@@ -8,6 +8,18 @@ export default function Settings({ onBack }) {
     appBg, setAppBg, cardBg, setCardBg, textColor, setTextColor,
     borderColor, setBorderColor, fontFamily, setFontFamily, elevation, setElevation
   } = useContext(ThemeContext);
+
+  // ดึง ID ผู้ใช้เพื่อใช้เป็น Key ในการเซฟข้อมูลแยกคน
+  const currentUserId = localStorage.getItem('currentUserId') || 'guest';
+  const storageKey = `theme_settings_${currentUserId}`;
+
+  // บันทึกค่าลง localStorage อัตโนมัติทุกครั้งที่มีการเปลี่ยนค่าใดๆ
+  useEffect(() => {
+    const themeConfig = {
+      themeMode, accentColor, transparency, appBg, cardBg, textColor, borderColor, fontFamily, elevation
+    };
+    localStorage.setItem(storageKey, JSON.stringify(themeConfig));
+  }, [themeMode, accentColor, transparency, appBg, cardBg, textColor, borderColor, fontFamily, elevation, storageKey]);
 
   const appBackgrounds = [
     { id: 'default', value: 'default', label: 'ดั้งเดิม' },
@@ -26,12 +38,11 @@ export default function Settings({ onBack }) {
     { id: 'slate', hex: '#1E293B' },
   ];
 
-  // เพิ่มสีเขียวสะท้อนแสงตามสั่ง
   const textColors = [
     { id: 'default', hex: 'default', label: 'Aa' },
     { id: 'white', hex: '#FFFFFF', label: 'Aa' },
     { id: 'black', hex: '#000000', label: 'Aa' },
-    { id: 'neonGreen', hex: '#39FF14', label: 'Aa' }, // เขียวสด (Neon Green)
+    { id: 'neonGreen', hex: '#39FF14', label: 'Aa' },
     { id: 'goldText', hex: '#FBBF24', label: 'Aa' },
   ];
 
@@ -53,7 +64,6 @@ export default function Settings({ onBack }) {
   return (
     <div className="flex flex-col w-full h-[100dvh] md:h-full bg-[var(--app-bg)] transition-all duration-300" style={{ fontFamily: 'var(--font-family)' }}>
       
-      {/* Header ใช้ box-shadow ตามค่า Elevation */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--border-color)] transition-all duration-300" style={{ boxShadow: 'var(--nav-shadow)' }}>
         <button onClick={onBack} className="text-[var(--text-heading)] hover:opacity-70 transition p-2">
           <ArrowLeft size={24} />
@@ -140,7 +150,7 @@ export default function Settings({ onBack }) {
                 <button
                   key={b.id}
                   onClick={() => setBorderColor(b.hex)}
-                  className={`flex-1 py-2 mx-1 rounded-lg transition-all font-bold border-2 text-center text-[var(--text-heading)] ${borderColor === b.hex ? 'scale-105' : ''}`}
+                  className={`flex-1 py-2 mx-1 rounded-lg transition-all font-bold border-2 text-center text-[var(--text-heading)] ${borderColor === b.hex ? 'scale-105 border-[var(--icon-active)]' : ''}`}
                   style={{ borderColor: b.hex === 'default' ? 'var(--border-color)' : b.hex }}
                 >
                   {b.label}
