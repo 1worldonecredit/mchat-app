@@ -67,8 +67,7 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
       setFormData(prev => ({ ...prev, dob: `${standardYear}-${standardMonth}-${standardDay}` }));
     }
   }, [thaiDay, thaiMonth, thaiYear, dateMode]);
-
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -101,8 +100,9 @@ export default function RegisterBasic({ onBack, onRegisterSuccess }) {
     try {
       const data = await registerBasicUser(formData);
       if (data.success) {
-        localStorage.setItem('currentUserId', data.userId);
-        onRegisterSuccess(); 
+        // ลงทะเบียนสำเร็จ แจ้งเตือนผู้ใช้ และพาดับไปหน้า Login (หน้าก่อนหน้า)
+        alert('ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านของคุณ');
+        onBack(); 
       }
     } catch (err) {
       setError(`SYSTEM ERROR: ${err.message}`);
