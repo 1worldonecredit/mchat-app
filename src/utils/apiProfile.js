@@ -115,3 +115,43 @@ export const fetchReferenceData = async () => {
     throw error;
   }
 };
+
+
+// ดึงข้อมูลผู้ใช้ทั้งหมดมาแสดงใน Profile  new 31
+export const fetchUserProfile = async (userId) => {
+  try {
+    const res = await fetch(`${API_URL}/api/profile/${userId}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Fetch Profile Error:', error);
+    throw error;
+  }
+};
+
+// บันทึกข้อมูลแก้ไขใหม่ (Append-Only)
+export const updateUserProfile = async (payload) => {
+  try {
+    const res = await fetch(`${API_URL}/api/profile/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (error) {
+    throw error;
+  }
+};
+
+// อัปโหลดรูปภาพ
+export const uploadUserImage = async (payload) => {
+  try {
+    const res = await fetch(`${API_URL}/api/profile/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (error) {
+    throw error;
+  }
+};
