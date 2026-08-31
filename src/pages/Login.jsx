@@ -1,11 +1,21 @@
-import { useState } from 'react';
-import { ArrowLeft, User, Lock, ArrowRight, Fingerprint, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, User, Lock, ArrowRight, Fingerprint, Loader2, Mail, CheckSquare, Square } from 'lucide-react';
 import { loginUser } from '../utils/apiProfile';
 
-export default function Login({ onBack, onLoginSuccess }) {
+export default function Login({ onBack, onLoginSuccess, onRegisterClick, onForgotPasswordClick }) {
   const [formData, setFormData] = useState({ username: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // ดึงข้อมูลที่เคยให้ระบบจำไว้ตอนโหลดหน้าจอ
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('savedUsername');
+    if (savedUsername) {
+      setFormData(prev => ({ ...prev, username: savedUsername }));
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,26 +30,33 @@ export default function Login({ onBack, onLoginSuccess }) {
     try {
       const data = await loginUser(formData);
       if (data.success) {
-        // บันทึกข้อมูลและสิทธิ์ลงเครื่อง เพื่อความฉลาดของระบบตอนสลับหน้าจอ
+        // ระบบจำชื่อผู้ใช้ (ไม่จำรหัสผ่านเพื่อความปลอดภัย)
+        if (rememberMe) {
+          localStorage.setItem('savedUsername', formData.username);
+        } else {
+          localStorage.removeItem('savedUsername');
+        }
+
+        // บันทึก Session สิทธิ์การเข้าใช้งาน
         localStorage.setItem('currentUserId', data.userId);
         localStorage.setItem('currentUserRoles', JSON.stringify(data.roles));
         
-        // เช็กสิทธิ์โชว์ความฉลาดนิดนึงก่อนพาเข้าแอป
+        // เช็กสิทธิ์เพื่อแจ้งเตือน (ความฉลาดของระบบ)
         if (data.roles.includes('ADMIN') || data.roles.includes('SUPERADMIN')) {
           alert(`ยินดีต้อนรับผู้ดูแลระบบ: ${data.username}`);
         }
         
-        onLoginSuccess(); // ทะลุเข้าสู่หน้าแอปหลัก (Media/Feed)
+        onLoginSuccess();
       }
     } catch (err) {
-      setError(err.message);
+      setError(`ACCESS DENIED: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] transition-all duration-300" style={{ fontFamily: 'var(--font-family)' }}>
+    <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] transition-all duration-300 overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
       
       <div className="sticky top-0 z-40 flex items-center px-6 py-4 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--border-color)] transition-all">
         <button type="button" onClick={onBack} className="text-[var(--text-heading)] hover:text-[var(--icon-active)] transition p-2 -ml-2 rounded-lg">
@@ -48,7 +65,7 @@ export default function Login({ onBack, onLoginSuccess }) {
         <span className="ml-4 text-xs text-[var(--text-heading)] tracking-widest font-bold">SECURE LOGIN</span>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center px-8 pb-20 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-center px-8 pb-20 max-w-md mx-auto w-full mt-6">
         
         <div className="mb-10 text-center flex flex-col items-center">
           <div className="w-20 h-20 bg-[var(--card-bg)] border border-[var(--icon-active)] rounded-full flex items-center justify-center mb-6" style={{ boxShadow: '0 0 20px var(--icon-active)' }}>
@@ -95,11 +112,49 @@ export default function Login({ onBack, onLoginSuccess }) {
             </div>
           </div>
 
-          <button type="submit" disabled={isLoading} className="w-full mt-8 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] font-bold tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-[var(--icon-active)] hover:text-white disabled:opacity-50" style={{ boxShadow: 'var(--card-shadow)' }}>
-            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'ACCESS SYSTEM'} 
+          {/* ระบบจำรหัสผ่าน และ กู้คืนรหัสผ่าน */}
+          <div className="flex items-center justify-between mt-2 px-1">
+            <button type="button" onClick={() => setRememberMe(!rememberMe)} className="flex items-center gap-2 text-[var(--icon-inactive)] hover:text-[var(--text-heading)] transition-colors text-xs font-medium">
+              {rememberMe ? <CheckSquare size={16} className="text-[var(--icon-active)]" /> : <Square size={16} />}
+              จดจำชื่อผู้ใช้
+            </button>
+            <button type="button" onClick={onForgotPasswordClick} className="text-[var(--icon-active)] text-xs hover:underline transition-all font-semibold tracking-wide">
+              ลืมรหัสผ่าน?
+            </button>
+          </div>
+
+          <button type="submit" disabled={isLoading} className="w-full mt-6 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] font-bold tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-[var(--icon-active)] hover:text-white disabled:opacity-50" style={{ boxShadow: 'var(--card-shadow)' }}>
+            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'AUTHORIZE ACCESS'} 
             {!isLoading && <ArrowRight size={18} />}
           </button>
         </form>
+
+        {/* วิธีการเข้าสู่ระบบแบบอื่นๆ (Biometrics / Social) */}
+        <div className="mt-8 flex flex-col gap-4">
+          <div className="relative flex items-center justify-center">
+            <span className="absolute bg-[var(--app-bg)] px-3 text-[var(--icon-inactive)] text-[10px] tracking-widest uppercase">OR LOGIN WITH</span>
+            <div className="w-full border-t border-[var(--border-color)]"></div>
+          </div>
+          
+          <button type="button" className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] py-3 rounded-xl flex items-center justify-center gap-3 transition-all hover:border-[var(--icon-active)] text-sm">
+             <Mail size={18} className="text-red-500" /> Gmail Account
+          </button>
+          
+          <button type="button" className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] py-3 rounded-xl flex items-center justify-center gap-3 transition-all hover:border-[var(--icon-active)] text-sm">
+             <Fingerprint size={18} className="text-green-500" /> Biometrics (Face ID / Touch ID)
+          </button>
+        </div>
+
+        {/* ลิงก์สำหรับสลับไปหน้าลงทะเบียน */}
+        <div className="mt-10 text-center">
+          <p className="text-[var(--icon-inactive)] text-xs">
+            ยังไม่มีรหัสประจำตัว?{' '}
+            <button type="button" onClick={onRegisterClick} className="text-[var(--icon-active)] font-bold tracking-wider hover:underline transition-all">
+              สร้างบัญชีใหม่
+            </button>
+          </p>
+        </div>
+
       </div>
     </div>
   );
