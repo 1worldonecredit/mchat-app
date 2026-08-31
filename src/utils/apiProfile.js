@@ -52,7 +52,7 @@ export const checkUsername = async (username) => {
     const res = await fetch(`${API_URL}/api/check-username`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ username }) // <-- ห้ามเขียนแค่ (username) เด็ดขาด
     });
     return await res.json();
   } catch (error) {
