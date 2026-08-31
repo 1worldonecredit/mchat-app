@@ -49,13 +49,15 @@ export const deleteUserDetail = async (itemId) => {
 
 // ... (โค้ดเดิมด้านบนคงไว้) ...
 
-// เปลี่ยน URL จาก /api/register เป็น /api/register/basic
-export const registerBasicUser = async (username, password) => {
+// ในไฟล์ src/utils/apiProfile.js
+
+export const registerBasicUser = async (formData) => {
   try {
-    const res = await fetch(`${API_URL}/api/register/basic`, {  // <--- แก้ไขบรรทัดนี้
+    const res = await fetch(`${API_URL}/api/register/basic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      // สำคัญมาก: ส่ง formData ไปตรงๆ ไม่ต้องใส่ปีกกาครอบอีกชั้น
+      body: JSON.stringify(formData) 
     });
     
     const data = await res.json();
