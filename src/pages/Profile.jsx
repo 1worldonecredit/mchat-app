@@ -27,12 +27,39 @@ export default function Profile({ onBack, onLogout }) {
     }
   }, []);
 
-  const loadProfileData = async (userId) => {
+const loadProfileData = async (userId) => {
     setIsLoadingProfile(true);
     try {
       const data = await fetchUserProfile(userId);
-      if (data.success) {
-        setUserData(prev => ({ ...prev, ...data.user }));
+      // เช็กว่ามี data.success และมี data.profile (ตามโครงสร้าง API เดิมของคุณ)
+      if (data.success && data.profile) {
+        const p = data.profile;
+        setUserData(prev => ({ 
+          ...prev, 
+          username: p.username || '',
+          globalId: p.global_id || '',
+          nationality: p.nationality || '',
+          gender: p.gender || '',
+          dob: p.demographics?.birth_date || '',
+          referrer: p.referral?.referrer_name || 'ไม่มีผู้แนะนำ',
+          
+          // ข้อมูลจากตารางใหม่
+          firstName: p.first_name || '',
+          lastName: p.last_name || '',
+          idCard: p.id_card || '',
+          phone: p.phone || '',
+          email: p.email || '',
+          isPhoneVerified: p.is_phone_verified || false,
+          isEmailVerified: p.is_email_verified || false,
+          avatarUrl: p.avatar_url || '',
+          coverUrl: p.cover_url || '',
+          
+          // ข้อมูลสถิติ
+          friendsCount: p.stats?.friends || 0,
+          followersCount: p.stats?.followers || 0,
+          currentLevel: p.stats?.current_level || 1,
+          accountAge: p.demographics?.account_age || ''
+        }));
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
