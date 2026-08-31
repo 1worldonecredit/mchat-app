@@ -12,9 +12,13 @@ import '../FutureLayout.css';
 import Settings from './Settings';
 
 export default function Home() {
-  const [activeMenu, setActiveMenu] = useState('chat');
+  // 1. เปลี่ยนค่าเริ่มต้นเป็น 'media' เพื่อให้ทุกคนล็อกอินเข้ามาเจอหน้าฟีดทันที
+  const [activeMenu, setActiveMenu] = useState('media');
   const [activeChat, setActiveChat] = useState(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
+  // State ใหม่สำหรับควบคุมการเปิด/ปิด SideNav บนมือถือ
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // เช็คขนาดหน้าจอแบบ Real-time
   useEffect(() => {
@@ -32,7 +36,10 @@ export default function Home() {
   const handleMenuChange = (menuId) => {
     setActiveMenu(menuId);
     setActiveChat(null); // เคลียร์แชทเสมอเมื่อเปลี่ยนเมนู
+    setIsSidebarOpen(false); // ปิด Sidebar อัตโนมัติเมื่อกดเลือกเมนูบนมือถือ
   };
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const mockFriends = [
     { id: 1, name: 'MJ อ้วน', message: 'ส่งสลิปโอนเงินแล้วนะ', time: '12:00 PM', imageUrl: 'https://via.placeholder.com/40' },
@@ -48,7 +55,8 @@ export default function Home() {
       case 'chat':
         return (
           <div className="flex flex-col h-full bg-[var(--nav-bg)]">
-            <TopNav />
+            {/* ส่ง Props ไปให้ TopNav ทำงานได้เต็มระบบ */}
+            <TopNav toggleSidebar={toggleSidebar} onLogoClick={() => handleMenuChange('media')} />
             <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               {mockFriends.map(friend => (
                 <div 
@@ -59,10 +67,10 @@ export default function Home() {
                   <img src={friend.imageUrl} alt={friend.name} className="w-12 h-12 rounded-full object-cover" />
                   <div className="flex-1 overflow-hidden">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-semibold text-[var(--nav-text)] truncate">{friend.name}</h3>
-                      <span className="text-xs text-[var(--icon-color)]">{friend.time}</span>
+                      <h3 className="font-semibold text-[var(--text-heading)] truncate">{friend.name}</h3>
+                      <span className="text-xs text-[var(--icon-inactive)]">{friend.time}</span>
                     </div>
-                    <p className="text-sm text-[var(--icon-color)] truncate">{friend.message}</p>
+                    <p className="text-sm text-[var(--icon-inactive)] truncate">{friend.message}</p>
                   </div>
                 </div>
               ))}
@@ -83,16 +91,34 @@ export default function Home() {
     if (activeMenu === 'profile') {
       return <Profile onBack={() => handleMenuChange('chat')} />;
     }
-    // เพิ่มบรรทัดนี้เข้าไป
     if (activeMenu === 'settings') {
       return <Settings onBack={() => handleMenuChange('chat')} />;
     }
     if (activeChat) {
       return <ChatWindow chat={activeChat} onBack={() => setActiveChat(null)} isMobile={isMobile || isTablet} />;
     }
-    if (activeMenu === 'chat') {
-      return <HomeFeed />;
+    
+    // โซนแสดงหน้า Media เต็มรูปแบบ พร้อม TopNav ด้านบน
+    if (activeMenu === 'media') {
+      return (
+        <div className="flex flex-col w-full h-full bg-[var(--app-bg)]">
+          <TopNav toggleSidebar={toggleSidebar} onLogoClick={() => handleMenuChange('media')} />
+          <div className="flex-1 overflow-hidden">
+             <HomeFeed />
+          </div>
+        </div>
+      );
     }
+
+    // หน้าจอรอเลือกแชท
+    if (activeMenu === 'chat') {
+      return (
+        <div className="flex-1 w-full h-full flex items-center justify-center bg-[var(--app-bg)]">
+          <p className="text-[var(--icon-inactive)] text-sm">เลือกแชทเพื่อเริ่มต้นสนทนา</p>
+        </div>
+      );
+    }
+    
     // หน้าจอว่างสำหรับเมนูอื่นๆ ที่ยังไม่มี Detail
     return <div className="flex-1 bg-[var(--app-bg)] w-full h-full"></div>;
   };
@@ -101,18 +127,18 @@ export default function Home() {
   // ตรรกะการแสดงผล (Layout Logic)
   // ==========================================
   
-  // 1. แถบไอคอนซ้ายสุด (SideNav) แสดงบน PC และ Tablet
+  // 1. แถบไอคอนซ้ายสุด (SideNav)
   const showSideNav = isDesktop || isTablet;
 
   // 2. ควบคุมการแสดงผล List และ Detail
-  // 2. ควบคุมการแสดงผล List และ Detail
-  const isDetailActive = activeChat !== null || activeMenu === 'profile' || activeMenu === 'settings';
+  // เพิ่ม 'media' เป็นหน้า Detail ด้วย เพื่อให้แสดงผลแบบเต็มจอได้
+  const isDetailActive = activeChat !== null || activeMenu === 'profile' || activeMenu === 'settings' || activeMenu === 'media';
   let showListZone = false;
   let showDetailZone = false;
 
   if (isDesktop) {
-    // โหมดคอมพิวเตอร์: โชว์ 3 คอลัมน์ (เว้นแต่เปิด Profile จะใช้พื้นที่ List+Detail รวมกัน)
-    showListZone = activeMenu !== 'profile'; 
+    // โหมดคอมพิวเตอร์: ซ่อน ListZone ถ้าเปิด Media, Profile, Settings เพื่อให้เนื้อหาหลักกว้างเต็มตา
+    showListZone = !['profile', 'settings', 'media'].includes(activeMenu); 
     showDetailZone = true;
   } else {
     // โหมด Tablet & Mobile: โชว์แค่ทีละหน้า
@@ -124,21 +150,29 @@ export default function Home() {
   const showBottomNav = isMobile;
 
   return (
-    <div className="glass-app-window w-full h-full flex flex-col relative">
+    <div className="glass-app-window w-full h-full flex flex-col relative overflow-hidden">
       
+      {/* โซน Overlay สีดำสำหรับมือถือ (คลิกเพื่อปิดเมนู) */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* พื้นที่หลัก (ซ้ายไปขวา) */}
       <div className="flex-1 flex w-full h-full overflow-hidden">
         
-        {/* คอลัมน์ซ้ายสุด: SideNav */}
-        {showSideNav && (
-          <div className="glass-panel w-[80px] flex-shrink-0 z-50">
+        {/* คอลัมน์ซ้ายสุด: SideNav (ทำงานร่วมกับระบบสไลด์บนมือถือ) */}
+        {(showSideNav || isMobile) && (
+          <div className={`glass-panel flex-shrink-0 z-50 ${isMobile ? `fixed inset-y-0 left-0 w-[80px] transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}` : 'w-[80px]'}`}>
             <SideNav activeMenu={activeMenu} onMenuChange={handleMenuChange} />
           </div>
         )}
 
         {/* คอลัมน์กลาง: List Zone */}
         {showListZone && (
-          <div className={`glass-panel flex-shrink-0 z-40 ${isDesktop ? 'w-[320px]' : 'flex-1'}`}>
+          <div className={`glass-panel flex-shrink-0 z-30 ${isDesktop ? 'w-[320px]' : 'flex-1'}`}>
             {renderListZone()}
           </div>
         )}
