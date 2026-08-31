@@ -29,17 +29,17 @@ export function ThemeProvider({ children }) {
         console.error("Theme parse error", e);
       }
     }
-    // ค่าเริ่มต้นตามภาพ (สว่าง, ฟอนต์ Serif, สีแอป/ขอบเหลืองส้ม, แบนราบ)
+    // ค่าเริ่มต้นใหม่: Premium Modern Dark (สวย ล้ำสมัย อ่านง่าย)
     return {
-      themeMode: 'light',
-      accentColor: '#F59E0B', 
-      transparency: '20',
+      themeMode: 'dark', // ใช้โหมดมืดเป็นค่าเริ่มต้น
+      accentColor: '#F59E0B', // สีส้มทอง
+      transparency: '80', // ปรับความทึบแสงให้การ์ดดูชัดเจนขึ้น (จากเดิม 20)
       appBg: 'default',
-      cardBg: '#FFFFFF',
+      cardBg: 'default',
       textColor: 'default',
-      borderColor: '#F59E0B',
-      fontFamily: 'serif',
-      elevation: 'flat'
+      borderColor: 'default', // ใช้เส้นขอบแบบเนียน (ไม่ใช้สีส้มกระแทกตา)
+      fontFamily: 'default', // ฟอนต์มาตรฐานแบบโมเดิร์น
+      elevation: 'raised' // มีมิติแสงเงายกตัวขึ้นมาเล็กน้อย
     };
   };
 
