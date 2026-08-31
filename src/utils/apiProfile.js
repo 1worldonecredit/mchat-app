@@ -79,13 +79,14 @@ export const registerBasicUser = async (formData) => {
   }
 };
 
-// 6. เข้าสู่ระบบ (Login)
-export const loginUser = async (username, password) => {
+
+
+export const loginUser = async (credentials) => {
   try {
     const res = await fetch(`${API_URL}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify(credentials)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
