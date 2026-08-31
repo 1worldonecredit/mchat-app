@@ -1,41 +1,61 @@
 import { useState } from 'react';
-import { ThemeProvider } from './ThemeContext'; // นำเข้า ThemeProvider ของคุณกลับมา
+import { ThemeProvider } from './ThemeContext';
 import Login from './pages/Login';
 import RegisterBasic from './pages/RegisterBasic';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 
 export default function App() {
+  // ตรวจสอบสถานะการล็อกอินตอนเปิดแอป
   const [currentScreen, setCurrentScreen] = useState(() => {
     return localStorage.getItem('currentUserId') ? 'home' : 'login';
   });
 
-  // แยกฟังก์ชันเช็คหน้าจอออกมาเพื่อให้โค้ดอ่านง่าย
   const renderScreen = () => {
     if (currentScreen === 'login') {
-      return <Login onLoginSuccess={() => setCurrentScreen('home')} onGoToRegister={() => setCurrentScreen('register')} />;
+      return (
+        <Login 
+          onLoginSuccess={() => setCurrentScreen('home')} 
+          onGoToRegister={() => setCurrentScreen('register')} 
+        />
+      );
     }
+    
     if (currentScreen === 'register') {
-      return <RegisterBasic onBack={() => setCurrentScreen('login')} onRegisterSuccess={() => setCurrentScreen('profile')} />;
+      return (
+        <RegisterBasic 
+          onBack={() => setCurrentScreen('login')} 
+          // ปรับให้พาไปหน้า home (ซึ่งจะแสดงหน้า Media เป็นหน้าแรกตามที่ตั้งค่าไว้ใน Home)
+          onRegisterSuccess={() => setCurrentScreen('home')} 
+        />
+      );
     }
+    
     if (currentScreen === 'home') {
-      return <Home onGoToProfile={() => setCurrentScreen('profile')} />;
+      return (
+        <Home 
+          onGoToProfile={() => setCurrentScreen('profile')} 
+        />
+      );
     }
+    
     if (currentScreen === 'profile') {
       return (
         <Profile 
           onBack={() => setCurrentScreen('home')} 
           onLogout={() => {
-            localStorage.removeItem('currentUserId');
+            // สำคัญ: ใช้ clear() ล้างข้อมูลทั้งหมดป้องกัน ID หรือ Theme เก่าค้างจนทำให้หน้าจอหมุนติ้ว
+            localStorage.clear();
+            sessionStorage.clear();
             setCurrentScreen('login');
           }} 
         />
       );
     }
+    
     return null;
   };
 
-  // เอา ThemeProvider ครอบตัวแอปไว้ (จุดนี้แหละที่แก้ปัญหาจอดับหน้า Settings)
   return (
     <ThemeProvider>
       {renderScreen()}
