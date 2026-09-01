@@ -182,3 +182,26 @@
     border-right-color: var(--border);
   }
 }
+
+/* ========================================= */
+/* M-CHAT: Mobile & Tablet Layout Fixes      */
+/* ========================================= */
+@media (max-width: 1024px) {
+  /* 1. บังคับความกว้างสูงสุด ห้ามกล่องหลักทะลุขอบจอ (แก้ปัญหา 100vw ดันขอบ) */
+  html, body, #root {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 2. ดึงกลุ่มเมนูไอคอนฝั่งขวา (อ้างอิงจากคลาส right-3 เดิม) เข้ามาด้านใน */
+  .media-scroll-area .absolute.right-3 {
+    right: 20px !important;
+  }
+
+  /* 3. ดึงกลุ่มข้อความฝั่งซ้าย (อ้างอิงจากคลาส left-3 เดิม) เข้ามา และจำกัดความกว้างไม่ให้ทับไอคอนขวา */
+  .media-scroll-area .absolute.left-3 {
+    left: 20px !important;
+    max-width: 65% !important;
+  }
+}
