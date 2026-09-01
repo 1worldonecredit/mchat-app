@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import RegisterBasic from './pages/RegisterBasic';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -73,6 +74,7 @@ export default function App() {
             sessionStorage.clear();
             setCurrentScreen('login');
           }} 
+          onSettingsClick={() => setCurrentScreen('settings')} // <-- เพิ่มบรรทัดนี้
         />
       );
     }
