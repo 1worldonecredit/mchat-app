@@ -528,6 +528,21 @@ const handleImageUpload = async (e, type) => {
                 </div>
               )}
 
+              {/* ฟอร์มกรอกเลขบัตรประชาชน */}
+              {editField === 'idcard' && (
+                <div>
+                  <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">เลขประจำตัวประชาชน (13 หลัก)</label>
+                  <input 
+                    type="text" 
+                    maxLength="13"
+                    value={editForm.val1} 
+                    onChange={e => setEditForm({...editForm, val1: e.target.value.replace(/[^0-9]/g, '')})} 
+                    className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm" 
+                    placeholder="x-xxxx-xxxxx-xx-x" 
+                  />
+                </div>
+              )}
+
               <button 
                 onClick={handleSaveEdit} 
                 disabled={isSaving} 
