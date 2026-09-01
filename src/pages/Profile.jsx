@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
+import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, CreditCard, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
 
 export default function Profile({ onBack, onLogout }) {
@@ -300,7 +300,7 @@ const handleImageUpload = async (e, type) => {
               </div>
             </div>
           </div>
-
+          
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4 border-b border-[var(--border-color)] pb-3">
               <UserIcon size={16} className="text-[var(--icon-active)]" />
@@ -308,6 +308,7 @@ const handleImageUpload = async (e, type) => {
             </div>
             
             <div className="space-y-4">
+              {/* --- 1. ชื่อ-นามสกุล --- */}
               <div className="flex items-center justify-between group">
                 <div>
                   <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1">ชื่อ - นามสกุล</p>
@@ -315,11 +316,31 @@ const handleImageUpload = async (e, type) => {
                     {userData.firstName ? `${userData.firstName} ${userData.lastName}` : <span className="text-red-400 text-xs italic">ยังไม่ระบุข้อมูล</span>}
                   </p>
                 </div>
+                {/* ปุ่มเรียก Modal แก้ไขชื่อ */}
                 <button onClick={() => openEditModal('name')} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition rounded-lg bg-[var(--app-bg)] border border-[var(--border-color)]">
                   <Edit2 size={14} />
                 </button>
               </div>
 
+              {/* --- 2. เลขบัตรประชาชน (เพิ่มใหม่ตรงนี้) --- */}
+              <div className="flex items-center justify-between group pt-2 border-t border-[var(--border-color)]/50">
+                <div>
+                  <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <CreditCard size={10} /> เลขบัตรประชาชน
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--text-heading)]">
+                      {userData.idCard || <span className="text-red-400 text-xs italic">ยังไม่ระบุข้อมูล</span>}
+                    </p>
+                  </div>
+                </div>
+                {/* ปุ่มเรียก Modal แก้ไขบัตรประชาชน */}
+                <button onClick={() => openEditModal('idcard')} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition rounded-lg bg-[var(--app-bg)] border border-[var(--border-color)]">
+                  <Edit2 size={14} />
+                </button>
+              </div>
+
+              {/* --- 3. เบอร์โทรศัพท์ --- */}
               <div className="flex items-center justify-between group pt-2 border-t border-[var(--border-color)]/50">
                 <div>
                   <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -336,11 +357,13 @@ const handleImageUpload = async (e, type) => {
                     )}
                   </div>
                 </div>
+                {/* ปุ่มเรียก Modal แก้ไขเบอร์โทร */}
                 <button onClick={() => openEditModal('phone')} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition rounded-lg bg-[var(--app-bg)] border border-[var(--border-color)]">
                   <Edit2 size={14} />
                 </button>
               </div>
 
+              {/* --- 4. อีเมล --- */}
               <div className="flex items-center justify-between group pt-2 border-t border-[var(--border-color)]/50">
                 <div>
                   <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -357,6 +380,7 @@ const handleImageUpload = async (e, type) => {
                     )}
                   </div>
                 </div>
+                {/* ปุ่มเรียก Modal แก้ไขอีเมล */}
                 <button onClick={() => openEditModal('email')} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition rounded-lg bg-[var(--app-bg)] border border-[var(--border-color)]">
                   <Edit2 size={14} />
                 </button>
