@@ -65,6 +65,13 @@ export default function App() {
       );
     }
 
+    // คุณลืมเพิ่มบล็อกนี้ครับ ระบบเลยไม่รู้ว่าถ้า currentScreen เป็น settings ต้องทำอะไร
+    if (currentScreen === 'settings') {
+      return (
+        <Settings onBack={() => setCurrentScreen('profile')} />
+      );
+    }
+
     if (currentScreen === 'profile') {
       return (
         <Profile 
