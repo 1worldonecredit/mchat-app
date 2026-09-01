@@ -116,20 +116,42 @@ const loadProfileData = async (userId) => {
     }
   };
 
-  const handleImageUpload = async (e, type) => {
+const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result;
-      setUserData(prev => ({ ...prev, [type === 'avatar' ? 'avatarUrl' : 'coverUrl']: base64String }));
       
+      // 1. โชว์พรีวิวรูปบนหน้าเว็บทันที (ไม่ให้ UI กระตุก)
+      setUserData(prev => ({ 
+        ...prev, 
+        [type === 'avatar' ? 'avatarUrl' : 'coverUrl']: base64String 
+      }));
+      
+      // 2. สั่งบันทึกลง Database เบื้องหลังทันที
       const userId = localStorage.getItem('currentUserId');
       if (userId) {
-        await uploadUserImage({ userId, type, imageBase64: base64String });
+        try {
+          const result = await uploadUserImage({ 
+            userId: userId, 
+            type: type, 
+            imageBase64: base64String 
+          });
+          
+          if (result.success) {
+            console.log(`บันทึกรูป ${type} สำเร็จ!`); // เช็คใน Console ได้ว่าบันทึกเข้าไหม
+          } else {
+            alert('บันทึกรูปล้มเหลว: ' + result.message);
+          }
+        } catch (error) {
+          console.error("บันทึกรูปภาพล้มเหลว:", error);
+          alert('ไม่สามารถบันทึกรูปได้ (ขนาดไฟล์อาจใหญ่เกินไป หรือ API เชื่อมต่อไม่ได้)');
+        }
       }
     };
+    // เริ่มอ่านไฟล์
     reader.readAsDataURL(file);
   };
 
