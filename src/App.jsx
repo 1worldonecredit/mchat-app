@@ -5,11 +5,13 @@ import RegisterBasic from './pages/RegisterBasic';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Media from './pages/Media'; // 1. เพิ่มการ Import หน้า Media
 import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    if (localStorage.getItem('currentUserId')) return 'home';
+    // 2. ถ้าล็อกอินค้างไว้ ให้โหลดหน้า 'media' เป็นหน้าแรกแทน 'home'
+    if (localStorage.getItem('currentUserId')) return 'media';
     if (!localStorage.getItem('isFirstTime')) return 'intro';
     return 'login';
   });
@@ -43,7 +45,7 @@ export default function App() {
       return (
         <Login 
           onBack={() => setCurrentScreen('intro')} 
-          onLoginSuccess={() => setCurrentScreen('home')} 
+          onLoginSuccess={() => setCurrentScreen('media')} // 3. ล็อกอินเสร็จให้เด้งไปหน้า 'media' ทันที
           onRegisterClick={() => setCurrentScreen('register')} 
           onForgotPasswordClick={() => console.log('Navigate to Forgot Password')}
         />
@@ -59,13 +61,20 @@ export default function App() {
       );
     }
 
+    // 4. บล็อกแสดงผลหน้า Media (TikTok Feed)
+    if (currentScreen === 'media') {
+      return (
+        <Media /> 
+      );
+    }
+
+    // หน้า Home เดิม (เก็บไว้เผื่อกดเข้าจาก Sidebar)
     if (currentScreen === 'home') {
       return (
         <Home onGoToProfile={() => setCurrentScreen('profile')} />
       );
     }
 
-    // คุณลืมเพิ่มบล็อกนี้ครับ ระบบเลยไม่รู้ว่าถ้า currentScreen เป็น settings ต้องทำอะไร
     if (currentScreen === 'settings') {
       return (
         <Settings onBack={() => setCurrentScreen('profile')} />
@@ -75,13 +84,13 @@ export default function App() {
     if (currentScreen === 'profile') {
       return (
         <Profile 
-          onBack={() => setCurrentScreen('home')} 
+          onBack={() => setCurrentScreen('media')} // กดกลับจากโปรไฟล์ให้มาที่ media
           onLogout={() => {
             localStorage.clear();
             sessionStorage.clear();
             setCurrentScreen('login');
           }} 
-          onSettingsClick={() => setCurrentScreen('settings')} // <-- เพิ่มบรรทัดนี้
+          onSettingsClick={() => setCurrentScreen('settings')}
         />
       );
     }
