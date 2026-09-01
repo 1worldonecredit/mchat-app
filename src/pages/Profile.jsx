@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
 
 export default function Profile({ onBack, onLogout }) {
@@ -133,6 +133,7 @@ const loadProfileData = async (userId) => {
     reader.readAsDataURL(file);
   };
 
+
   if (isLoadingProfile) {
     return (
       <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--icon-active)]">
@@ -141,6 +142,35 @@ const loadProfileData = async (userId) => {
       </div>
     );
   }
+
+  const formatDOBAndAge = (dateString) => {
+    if (!dateString || dateString === '-') return '-';
+    
+    const dob = new Date(dateString);
+    if (isNaN(dob)) return dateString;
+
+    const today = new Date();
+    let years = today.getFullYear() - dob.getFullYear();
+    let months = today.getMonth() - dob.getMonth();
+    let days = today.getDate() - dob.getDate();
+
+    if (months < 0 || (months === 0 && days < 0)) {
+      years--;
+      months += 12;
+    }
+    if (days < 0) {
+      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      days += prevMonth.getDate();
+      months--;
+    }
+
+    // แปลงรูปแบบเป็น 10 ก.ค. 2520
+    const formattedDate = dob.toLocaleDateString('th-TH', { 
+      year: 'numeric', month: 'short', day: 'numeric' 
+    });
+
+    return `${formattedDate} (อายุ ${years} ปี ${months} เดือน ${days} วัน)`;
+  };
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
@@ -221,7 +251,9 @@ const loadProfileData = async (userId) => {
               </div>
               <div>
                 <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1">วันเกิด</p>
-                <p className="text-xs font-medium text-[var(--text-heading)]">{userData.dob}</p>
+                <p className="text-xs font-medium text-[var(--text-heading)]">
+                  {formatDOBAndAge(userData.dob)}
+                </p>
               </div>
               <div>
                 <p className="text-[10px] text-[var(--icon-inactive)] uppercase tracking-wider mb-1">สัญชาติ / เพศ</p>
@@ -294,6 +326,43 @@ const loadProfileData = async (userId) => {
                   <Edit2 size={14} />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Card เมนูใหม่: สื่อ, ตั้งค่า, ออกจากระบบ */}
+          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 border-b border-[var(--border-color)] pb-3">
+              <Settings size={16} className="text-blue-500" />
+              <h3 className="text-sm font-bold text-[var(--text-heading)]">เมนูและการตั้งค่า</h3>
+            </div>
+            
+            <div className="space-y-2">
+              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--app-bg)] transition group border border-transparent hover:border-[var(--border-color)]">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500 group-hover:scale-110 transition">
+                    <PlayCircle size={18} />
+                  </div>
+                  <span className="text-sm font-medium text-[var(--text-heading)]">สร้างช่อง มีเดียของคุณ</span>
+                </div>
+                <ArrowLeft size={16} className="text-[var(--icon-inactive)] rotate-180" />
+              </button>
+
+              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--app-bg)] transition group border border-transparent hover:border-[var(--border-color)]">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gray-500/10 p-2 rounded-lg text-gray-500 group-hover:scale-110 transition">
+                    <Settings size={18} />
+                  </div>
+                  <span className="text-sm font-medium text-[var(--text-heading)]">การตั้งค่า (Settings)</span>
+                </div>
+                <ArrowLeft size={16} className="text-[var(--icon-inactive)] rotate-180" />
+              </button>
+
+              <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 transition group border border-transparent hover:border-red-500/30 mt-2">
+                <div className="bg-red-500/10 p-2 rounded-lg text-red-500 group-hover:scale-110 transition">
+                  <LogOut size={18} />
+                </div>
+                <span className="text-sm font-medium text-red-500">ออกจากระบบ</span>
+              </button>
             </div>
           </div>
 
