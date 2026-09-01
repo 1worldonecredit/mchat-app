@@ -131,16 +131,24 @@ export const updateUserProfile = async (payload) => {
   }
 };
 
-// อัปโหลดรูปภาพ
-export const uploadUserImage = async (payload) => {
+// ฟังก์ชันอัปโหลดรูปภาพ
+export const uploadUserImage = async ({ userId, type, imageBase64 }) => {
   try {
-    const res = await fetch(`${API_URL}/api/profile/upload`, {
+    const response = await fetch(`${API_URL}/api/profile/upload-image`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, type, imageBase64 }),
     });
-    return await res.json();
+    
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Network response was not ok');
+    }
+    return data;
   } catch (error) {
+    console.error('Error uploading image:', error);
     throw error;
   }
 };
