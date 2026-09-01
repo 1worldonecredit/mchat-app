@@ -84,14 +84,17 @@ const loadProfileData = async (userId) => {
     else window.location.href = '/'; 
   };
 
+  // 1. ฟังก์ชันเปิด Modal พร้อมดึงข้อมูลเก่ามาแสดงในช่องกรอก
   const openEditModal = (field) => {
     setEditField(field);
     if (field === 'name') setEditForm({ val1: userData.firstName, val2: userData.lastName });
     else if (field === 'phone') setEditForm({ val1: userData.phone, val2: '' });
     else if (field === 'email') setEditForm({ val1: userData.email, val2: '' });
+    else if (field === 'idcard') setEditForm({ val1: userData.idCard || '', val2: '' }); // ดึงเลขบัตรมาแสดง
     setIsModalOpen(true);
   };
 
+  // 2. ฟังก์ชันจัดเตรียมข้อมูล (Payload) เพื่อยิงไปหา API
   const handleSaveEdit = async () => {
     setIsSaving(true);
     const userId = localStorage.getItem('currentUserId');
@@ -100,13 +103,19 @@ const loadProfileData = async (userId) => {
     if (editField === 'name') {
       payload.firstName = editForm.val1;
       payload.lastName = editForm.val2;
-    } else if (editField === 'phone') payload.phone = editForm.val1;
-    else if (editField === 'email') payload.email = editForm.val1;
+    } else if (editField === 'phone') {
+      payload.phone = editForm.val1;
+    } else if (editField === 'email') {
+      payload.email = editForm.val1;
+    } else if (editField === 'idcard') {
+      payload.idCard = editForm.val1; // แนบเลขบัตรประชาชนไปกับ Payload
+    }
 
     try {
+      // ยิง API (ผ่าน apiProfile.js)
       const result = await updateUserProfile(payload);
       if (result.success) {
-        await loadProfileData(userId); 
+        await loadProfileData(userId); // โหลดข้อมูลใหม่มาแสดงทันที
         setIsModalOpen(false);
       }
     } catch (error) {
