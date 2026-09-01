@@ -488,7 +488,7 @@ const handleImageUpload = async (e, type) => {
             <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)] bg-[var(--app-bg)]">
               <h3 className="text-sm font-bold text-[var(--text-heading)] flex items-center gap-2">
                 <Edit2 size={16} className="text-[var(--icon-active)]"/> 
-                เพิ่มข้อมูล {editField === 'name' ? 'ชื่อ-นามสกุล' : editField === 'phone' ? 'เบอร์โทรศัพท์' : 'อีเมล'}
+                เพิ่มข้อมูล {editField === 'name' ? 'ชื่อ-นามสกุล' : editField === 'phone' ? 'เบอร์โทรศัพท์' : editField === 'idcard' ? 'เลขบัตรประชาชน' : 'อีเมล'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-[var(--icon-inactive)] hover:text-red-500 transition">
                 <X size={20} />
