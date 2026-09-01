@@ -203,6 +203,7 @@ const handleImageUpload = async (e, type) => {
     return `${formattedDate} (อายุ ${years} ปี ${months} เดือน ${days} วัน)`;
   };
 
+  
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] overflow-y-auto" style={{ fontFamily: 'var(--font-family)' }}>
       
