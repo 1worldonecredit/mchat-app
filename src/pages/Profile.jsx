@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, CreditCard, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
 
-export default function Profile({ onBack, onLogout }) {
+export default function Profile({ onBack, onLogout, onSettingsClick }) {
   const [userData, setUserData] = useState({
     username: '', globalId: '', nationality: '', gender: '', dob: '', idCard: '', referrer: '',
     firstName: '', lastName: '', phone: '', email: '',
@@ -415,15 +415,20 @@ const handleImageUpload = async (e, type) => {
                 <ArrowLeft size={16} className="text-[var(--icon-inactive)] rotate-180" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--app-bg)] transition group border border-transparent hover:border-[var(--border-color)]">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gray-500/10 p-2 rounded-lg text-gray-500 group-hover:scale-110 transition">
-                    <Settings size={18} />
-                  </div>
-                  <span className="text-sm font-medium text-[var(--text-heading)]">การตั้งค่า (Settings)</span>
+                    {/* ปุ่ม การตั้งค่า (Settings) */}
+                <button 
+                onClick={onSettingsClick} 
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--app-bg)] transition group border border-transparent hover:border-[var(--border-color)]"
+                >
+               <div className="flex items-center gap-3">
+               <div className="bg-gray-500/10 p-2 rounded-lg text-gray-500 group-hover:scale-110 transition">
+             <Settings size={18} />
                 </div>
+              <span className="text-sm font-medium text-[var(--text-heading)]">การตั้งค่า (Settings)</span>
+              </div>
                 <ArrowLeft size={16} className="text-[var(--icon-inactive)] rotate-180" />
               </button>
+              
 
               <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 transition group border border-transparent hover:border-red-500/30 mt-2">
                 <div className="bg-red-500/10 p-2 rounded-lg text-red-500 group-hover:scale-110 transition">
