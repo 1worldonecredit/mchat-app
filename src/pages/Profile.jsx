@@ -215,27 +215,40 @@ const handleImageUpload = async (e, type) => {
       </div>
 
       <div className="flex-1 flex flex-col pb-20 w-full max-w-2xl mx-auto">
+       {/* --- โซนรูปปกและรูปโปรไฟล์ --- */}
         <div className="relative w-full h-40 bg-gradient-to-r from-blue-900 to-purple-900 group">
-          {userData.coverUrl && <img src={userData.coverUrl} alt="Cover" className="w-full h-full object-cover opacity-60" />}
-          <button onClick={() => coverInputRef.current.click()} className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition backdrop-blur-sm">
+          
+          {/* 1. รูปปก (Cover) - เพิ่ม absolute inset-0 เพื่อให้แนบไปกับพื้นหลัง ไม่ดัน Layout */}
+          {userData.coverUrl && (
+            <img 
+              src={userData.coverUrl} 
+              alt="Cover" 
+              className="absolute inset-0 w-full h-full object-cover opacity-60 z-0" 
+            />
+          )}
+          
+          <button onClick={() => coverInputRef.current.click()} className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition backdrop-blur-sm z-10">
             <Camera size={16} />
           </button>
           <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'cover')} />
           
-          <div className="absolute -bottom-10 left-8 relative group w-24 h-24">
-            <div className="w-24 h-24 rounded-full border-4 border-[var(--app-bg)] bg-[var(--card-bg)] overflow-hidden flex items-center justify-center relative">
+          {/* 2. รูปโปรไฟล์ (Avatar) - ใช้ absolute ลอยตัวเหนือเส้นขอบปก (z-20) */}
+          <div className="absolute -bottom-10 left-8 group w-24 h-24 z-20">
+            <div className="w-24 h-24 rounded-full border-4 border-[var(--app-bg)] bg-[var(--card-bg)] overflow-hidden flex items-center justify-center relative shadow-md">
               {userData.avatarUrl ? (
                 <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <UserIcon size={40} className="text-[var(--icon-inactive)]" />
               )}
             </div>
-            <button onClick={() => avatarInputRef.current.click()} className="absolute bottom-0 right-0 bg-[var(--icon-active)] p-2 rounded-full text-white border-2 border-[var(--app-bg)] transition shadow-lg">
+            
+            <button onClick={() => avatarInputRef.current.click()} className="absolute bottom-0 right-0 bg-[var(--icon-active)] p-2 rounded-full text-white border-2 border-[var(--app-bg)] transition shadow-lg z-30">
               <Camera size={14} />
             </button>
             <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'avatar')} />
           </div>
         </div>
+        {/* --- จบโซนรูปปกและรูปโปรไฟล์ --- */}
 
         <div className="px-8 mt-12 mb-6">
           <h2 className="text-2xl font-bold text-[var(--text-heading)]">{userData.username}</h2>
