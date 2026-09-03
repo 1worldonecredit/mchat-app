@@ -14,13 +14,7 @@ export default function Media({ setCurrentScreen }) {
   const [activeTab, setActiveTab] = useState('ForYou'); // 'Following' หรือ 'ForYou'
   const [followedChannels, setFollowedChannels] = useState([]);
 
-  // เพิ่ม 3 ตัวแปรนี้เข้าไปเพื่อให้โค้ดส่วน BottomNav ทำงานได้
-  const [showBottomNav, setShowBottomNav] = useState(true);
-  const [activeMenu, setActiveMenu] = useState('media');
-  const handleMenuChange = (menu) => {
-    setActiveMenu(menu);
-    if (setCurrentScreen) setCurrentScreen(menu);
-  };
+
 
   // เพิ่มใหม่: State และฟังก์ชันจัดการขยายหน้าจอ (Fullscreen)
   const [fullScreenId, setFullScreenId] = useState(null);
