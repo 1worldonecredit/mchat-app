@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Heart, MessageCircle, Share2, Music, Plus, Check,
-  Search, Tv, ShoppingCart, X, MapPin
+  Search, Tv, ShoppingCart, X, MapPin, 
+  Maximize2, Minimize2 // เพิ่มใหม่: ไอคอนขยายและย่อหน้าจอ
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 
@@ -12,6 +13,12 @@ export default function Media({ setCurrentScreen }) {
   // 1. ระบบจัดการ Tab และการติดตาม
   const [activeTab, setActiveTab] = useState('ForYou'); // 'Following' หรือ 'ForYou'
   const [followedChannels, setFollowedChannels] = useState([]);
+
+  // เพิ่มใหม่: State และฟังก์ชันจัดการขยายหน้าจอ (Fullscreen)
+  const [fullScreenId, setFullScreenId] = useState(null);
+  const toggleFullScreen = (id) => {
+    setFullScreenId(fullScreenId === id ? null : id);
+  };
 
   useEffect(() => {
     const savedProvince = localStorage.getItem('userProvince');
@@ -131,7 +138,8 @@ export default function Media({ setCurrentScreen }) {
         <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area">
           {/* ใช้ displayVideos ที่ผ่านการคิดคะแนนมาแล้วแทน videos แบบเดิม */}
           {displayVideos.length > 0 ? displayVideos.map((video) => (
-            <div key={video.id} className="relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden">
+            // เพิ่มใหม่: เช็กว่าถ้าวิดีโอนี้ถูกกดขยาย ให้ใส่ class fixed เต็มหน้าจอ (z-[100])
+            <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
               <video 
                 src={video.cloudflareUrl}
@@ -141,6 +149,14 @@ export default function Media({ setCurrentScreen }) {
                 muted 
                 playsInline
               />
+
+              {/* เพิ่มใหม่: ปุ่มไอคอน ขยาย/ย่อ อยู่มุมขวาบนของวิดีโอ */}
+              <button 
+                onClick={() => toggleFullScreen(video.id)}
+                className="absolute top-20 right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
+              >
+                {fullScreenId === video.id ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
 
               <div className="absolute bottom-0 left-0 w-full h-[60%] bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/60 to-transparent z-0 pointer-events-none"></div>
 
@@ -158,6 +174,16 @@ export default function Media({ setCurrentScreen }) {
                   <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
                     {video.tier}
                   </span>
+                  
+                  {/* เพิ่มใหม่: ปุ่ม "ติดตาม" แบบป้ายข้อความข้างชื่อ */}
+                  {!followedChannels.includes(video.channelName) && (
+                    <button 
+                      onClick={() => toggleFollow(video.channelName)}
+                      className="ml-2 bg-[var(--icon-active)] text-[var(--app-bg)] px-2 py-0.5 rounded text-[10px] font-bold hover:scale-105 transition shadow-md"
+                    >
+                      ติดตาม
+                    </button>
+                  )}
                 </div>
                 
                 <p className="text-[13px] mb-3 line-clamp-2 text-[var(--text-heading)] drop-shadow-md opacity-90 w-full pr-2">{video.caption}</p>
@@ -243,12 +269,12 @@ export default function Media({ setCurrentScreen }) {
         </div>
       )}
 
-     {/* แถบล่างสุด: BottomNav (ล็อกติดฐานจอเฉพาะมือถือ) */}
-           {showBottomNav && (
-              <div className="w-full flex-shrink-0 z-50 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
-                <BottomNav activeMenu={activeMenu} onMenuChange={handleMenuChange} />
-              </div>
-           )}
+      {/* แถบล่างสุด: BottomNav (ล็อกติดฐานจอเฉพาะมือถือ) โค้ดของคุณ 100% */}
+      {showBottomNav && (
+        <div className="w-full flex-shrink-0 z-50 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
+          <BottomNav activeMenu={activeMenu} onMenuChange={handleMenuChange} />
+        </div>
+      )}
 
     </div>
   );
