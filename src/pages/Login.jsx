@@ -8,7 +8,6 @@ export default function Login({ onBack, onLoginSuccess, onRegisterClick, onForgo
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // ดึงข้อมูลที่เคยให้ระบบจำไว้ตอนโหลดหน้าจอ
   useEffect(() => {
     const savedUsername = localStorage.getItem('savedUsername');
     if (savedUsername) {
@@ -16,6 +15,40 @@ export default function Login({ onBack, onLoginSuccess, onRegisterClick, onForgo
       setRememberMe(true);
     }
   }, []);
+
+  // ฟังก์ชันดึงพิกัดและแปลงเป็นชื่อจังหวัด (ทำงานเบื้องหลัง)
+  const fetchUserLocationAndSave = async (userId) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const apiKey = "ใส่_API_KEY_ของคุณที่นี่"; // นำ Geocoding API Key จาก Google Cloud มาใส่
+        
+        try {
+          const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=th&key=${apiKey}`);
+          const result = await res.json();
+          let provinceName = "ไม่ระบุตำแหน่ง";
+          
+          if (result.results && result.results.length > 0) {
+            const addressComponents = result.results[0].address_components;
+            const provinceObj = addressComponents.find(comp => comp.types.includes("administrative_area_level_1"));
+            if (provinceObj) provinceName = provinceObj.long_name;
+          }
+          
+          // เก็บชื่อจังหวัดไว้ใช้ในหน้า Media ทันที
+          localStorage.setItem('userProvince', provinceName);
+          
+          // TODO: เพิ่มฟังก์ชันส่งข้อมูล lat, lng, provinceName ไปบันทึกลง Database ของคุณ
+          // เช่น await updateLocationAPI(userId, lat, lng, provinceName);
+          
+        } catch (err) {
+          console.error("Geocoding API Error:", err);
+        }
+      }, (error) => {
+        console.error("ผู้ใช้ไม่อนุญาตให้เข้าถึงตำแหน่ง:", error);
+      });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,18 +63,18 @@ export default function Login({ onBack, onLoginSuccess, onRegisterClick, onForgo
     try {
       const data = await loginUser(formData);
       if (data.success) {
-        // ระบบจำชื่อผู้ใช้ (ไม่จำรหัสผ่านเพื่อความปลอดภัย)
         if (rememberMe) {
           localStorage.setItem('savedUsername', formData.username);
         } else {
           localStorage.removeItem('savedUsername');
         }
 
-        // บันทึก Session สิทธิ์การเข้าใช้งาน
         localStorage.setItem('currentUserId', data.userId);
         localStorage.setItem('currentUserRoles', JSON.stringify(data.roles));
         
-        // เช็กสิทธิ์เพื่อแจ้งเตือน (ความฉลาดของระบบ)
+        // เรียกใช้ฟังก์ชันดึงตำแหน่งทันทีที่ Login ผ่าน โดยไม่รอให้เสร็จ (ไม่บล็อก UI)
+        fetchUserLocationAndSave(data.userId);
+        
         if (data.roles.includes('ADMIN') || data.roles.includes('SUPERADMIN')) {
           alert(`ยินดีต้อนรับผู้ดูแลระบบ: ${data.username}`);
         }

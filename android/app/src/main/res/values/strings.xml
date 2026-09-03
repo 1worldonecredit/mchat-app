@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">m-chat</string>
+    <string name="title_activity_main">m-chat</string>
+    <string name="package_name">com.nineplus.mchat</string>
+    <string name="custom_url_scheme">com.nineplus.mchat</string>
+</resources>
