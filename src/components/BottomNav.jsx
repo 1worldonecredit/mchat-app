@@ -1,6 +1,7 @@
 import { MessageSquare, Phone, Wallet, Radio, User, Settings as SettingsIcon } from 'lucide-react';
 
-export default function BottomNav({ activeMenu, onMenuChange }) {
+// เพิ่ม setCurrentScreen เข้ามาเพื่อรองรับโครงสร้างเดิมของคุณ
+export default function BottomNav({ activeMenu, onMenuChange, setCurrentScreen }) {
   const navItems = [
     { id: 'chat', icon: MessageSquare },
     { id: 'call', icon: Phone },
@@ -8,12 +9,22 @@ export default function BottomNav({ activeMenu, onMenuChange }) {
     { id: 'broadcast', icon: Radio },
   ];
 
+  // ฟังก์ชันตัวกลาง: ถ้ารับ onMenuChange มาก็ใช้ ถ้าไม่มีให้เช็ก setCurrentScreen
+  const handleNavigation = (menuId) => {
+    if (onMenuChange) {
+      onMenuChange(menuId);
+    } else if (setCurrentScreen) {
+      setCurrentScreen(menuId);
+    } else {
+      console.error("BottomNav: ไม่พบคำสั่งสำหรับเปลี่ยนหน้าจอ");
+    }
+  };
+
   return (
-    // ส่วนหนึ่งของไฟล์ src/components/BottomNav.jsx
-<div 
-  className="w-full bg-[var(--nav-bg)] border-t border-[var(--border-color)] flex items-center justify-around py-3 px-2 transition-all duration-300"
-  style={{ boxShadow: 'var(--nav-shadow)' }} // เพิ่มบรรทัดนี้
->
+    <div 
+      className="w-full bg-[var(--nav-bg)] border-t border-[var(--border-color)] flex items-center justify-around py-3 px-2 transition-all duration-300"
+      style={{ boxShadow: 'var(--nav-shadow)' }}
+    >
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = activeMenu === item.id;
@@ -21,7 +32,7 @@ export default function BottomNav({ activeMenu, onMenuChange }) {
         return (
           <button 
             key={item.id}
-            onClick={() => onMenuChange(item.id)} 
+            onClick={() => handleNavigation(item.id)} 
             className={`p-2 rounded-xl transition-all duration-300 ${
               isActive 
                 ? 'bg-[var(--card-bg)] text-[var(--icon-active)] shadow-sm border border-[var(--border-color)]' 
@@ -34,7 +45,7 @@ export default function BottomNav({ activeMenu, onMenuChange }) {
       })}
       
       <button 
-        onClick={() => onMenuChange('profile')} 
+        onClick={() => handleNavigation('profile')} 
         className={`p-2 rounded-xl transition-all duration-300 ${
           activeMenu === 'profile' 
             ? 'bg-[var(--card-bg)] text-[var(--icon-active)] shadow-sm border border-[var(--border-color)]' 
@@ -45,7 +56,7 @@ export default function BottomNav({ activeMenu, onMenuChange }) {
       </button>
 
       <button 
-        onClick={() => onMenuChange('settings')} 
+        onClick={() => handleNavigation('settings')} 
         className={`p-2 rounded-xl transition-all duration-300 ${
           activeMenu === 'settings' 
             ? 'bg-[var(--card-bg)] text-[var(--icon-active)] shadow-sm border border-[var(--border-color)]' 
