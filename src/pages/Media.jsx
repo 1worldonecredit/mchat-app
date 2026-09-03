@@ -243,9 +243,12 @@ export default function Media({ setCurrentScreen }) {
         </div>
       )}
 
-      <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)]">
-        <BottomNav setCurrentScreen={setCurrentScreen} />
-      </div>
+     {/* แถบล่างสุด: BottomNav (ล็อกติดฐานจอเฉพาะมือถือ) */}
+           {showBottomNav && (
+              <div className="w-full flex-shrink-0 z-50 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
+                <BottomNav activeMenu={activeMenu} onMenuChange={handleMenuChange} />
+              </div>
+           )}
 
     </div>
   );
