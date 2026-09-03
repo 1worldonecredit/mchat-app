@@ -61,10 +61,10 @@ export default function App() {
       );
     }
 
-    // 4. บล็อกแสดงผลหน้า Media (TikTok Feed)
+// 4. บล็อกแสดงผลหน้า Media (TikTok Feed)
     if (currentScreen === 'media') {
       return (
-        <Media /> 
+        <Media setCurrentScreen={setCurrentScreen} /> 
       );
     }
 
