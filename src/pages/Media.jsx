@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 
-export default function Media({ setCurrentScreen }) {
+export default function Media({ setCurrentScreen, onMenuChange }) {
   const [showCart, setShowCart] = useState(false);
   const [province, setProvince] = useState("กำลังค้นหา...");
   
@@ -271,9 +271,13 @@ export default function Media({ setCurrentScreen }) {
         </div>
       )}
 
-      {/* แถบล่างสุด: ส่ง setCurrentScreen กลับไปให้ App.jsx ทำงานตรงๆ */}
+{/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
       <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
-        <BottomNav activeMenu="media" setCurrentScreen={setCurrentScreen} />
+        <BottomNav 
+          activeMenu="media" 
+          setCurrentScreen={setCurrentScreen} 
+          onMenuChange={onMenuChange} 
+        />
       </div>
 
     </div>
