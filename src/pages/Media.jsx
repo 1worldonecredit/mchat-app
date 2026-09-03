@@ -277,12 +277,10 @@ export default function Media({ setCurrentScreen }) {
         </div>
       )}
 
-      {/* แถบล่างสุด: BottomNav (ล็อกติดฐานจอเฉพาะมือถือ) โค้ดของคุณ 100% */}
-      {showBottomNav && (
-        <div className="w-full flex-shrink-0 z-50 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
-          <BottomNav activeMenu={activeMenu} onMenuChange={handleMenuChange} />
-        </div>
-      )}
+      {/* แถบล่างสุด: ส่ง setCurrentScreen กลับไปให้ App.jsx ทำงานตรงๆ */}
+      <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
+        <BottomNav activeMenu="media" setCurrentScreen={setCurrentScreen} />
+      </div>
 
     </div>
   );
