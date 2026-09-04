@@ -85,7 +85,7 @@ export default function App() {
       );
     }
 
-    if (currentScreen === 'profile') {
+   if (currentScreen === 'profile') {
       return (
         <Profile 
           onBack={() => setCurrentScreen('media')}
