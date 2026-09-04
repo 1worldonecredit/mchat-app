@@ -5,23 +5,21 @@ import {
   Heart, MessageCircle, Users, UserPlus, User
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
-import { fetchUserProfile } from '../utils/apiProfile'; // นำเข้า API สำหรับดึงข้อมูล User
+import { fetchUserProfile } from '../utils/apiProfile'; 
 
 export default function CreateMedia({ setCurrentScreen }) {
-  // --- State สำหรับข้อมูลส่วนตัว User ---
-  const [userData, setUserData] = useState(null);
-
-  // --- State สำหรับข้อมูลช่อง ---
-  const [channelData, setChannelData] = useState(null); 
-  const [templates, setTemplates] = useState([]);
+  // ==========================================
+  // 1. State ทั้งหมดที่ต้องใช้
+  // ==========================================
+  const [userData, setUserData] = useState(null); // ข้อมูลผู้ใช้งานส่วนตัว
+  const [channelData, setChannelData] = useState(null); // ข้อมูลช่องของ User
+  const [templates, setTemplates] = useState([]); // เทมเพลต
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- State สำหรับ โลโก้และตำแหน่งลายน้ำ ---
   const [channelLogo, setChannelLogo] = useState(null);
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
 
-  // --- State สำหรับ Modal สร้าง/แก้ไขช่อง ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -40,7 +38,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   const tabs = ['For You', 'Viral Song', 'Trendy', 'AI', 'Monthly Recap'];
 
   // ==========================================
-  // ดึงข้อมูลทั้งหมดเมื่อเปิดหน้า (User Profile + Channel)
+  // 2. โหลดข้อมูลเมื่อเปิดหน้า (User Profile & Channel)
   // ==========================================
   useEffect(() => {
     const fetchRealData = async () => {
@@ -52,29 +50,29 @@ export default function CreateMedia({ setCurrentScreen }) {
           return;
         }
 
-        // 1. ดึงข้อมูล User (Profile, Username, Stats)
-        const userRes = await fetchUserProfile(userId);
+        // ใช้ Promise.all ดึง 2 API พร้อมกัน เพื่อความรวดเร็วและแน่นอน
+        const [userRes, channelRes] = await Promise.all([
+          fetchUserProfile(userId).catch(() => null),
+          fetch(`/api/channels?userId=${userId}`).then(res => res.json()).catch(() => null)
+        ]);
+
+        // 2.1 อัปเดตข้อมูลผู้ใช้ (สำหรับแถบด้านบน)
         if (userRes && userRes.success && userRes.profile) {
           setUserData(userRes.profile);
         }
 
-        // 2. ดึงข้อมูลช่อง (Channel Data) จาก API จริง
-        try {
-          const channelRes = await fetch(`/api/channels?userId=${userId}`);
-          if (channelRes.ok) {
-            const channelJson = await channelRes.json();
-            if (channelJson.success && channelJson.channel) {
-              setChannelData(channelJson.channel);
-              if (channelJson.channel.logo_url) setChannelLogo(channelJson.channel.logo_url);
-              if (channelJson.channel.watermark_position) setWatermarkPos(channelJson.channel.watermark_position);
-            }
-          }
-        } catch (apiErr) {
-          console.warn("ไม่สามารถเชื่อมต่อ API ข้อมูลช่องได้", apiErr);
+        // 2.2 อัปเดตข้อมูลช่อง (สำคัญมาก! ตัวตัดสินว่าปุ่มสร้างช่องจะหายไปหรือไม่)
+        if (channelRes && channelRes.success && channelRes.channel) {
+          setChannelData(channelRes.channel);
+          if (channelRes.channel.logo_url) setChannelLogo(channelRes.channel.logo_url);
+          if (channelRes.channel.watermark_position) setWatermarkPos(channelRes.channel.watermark_position);
+        } else {
+          setChannelData(null); // ถ้าไม่มีช่องจริงๆ ให้แน่ใจว่าเป็น null
         }
 
       } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
+        setChannelData(null);
       } finally {
         setIsLoading(false);
       }
@@ -83,7 +81,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   }, []);
 
   // ==========================================
-  // จัดการบันทึกช่องใหม่ / แก้ไขช่อง
+  // 3. ฟังก์ชันบันทึกการสร้างช่องใหม่ หรือ แก้ไขช่อง
   // ==========================================
   const openEditModal = () => {
     if (channelData) {
@@ -119,6 +117,7 @@ export default function CreateMedia({ setCurrentScreen }) {
       
       const result = await response.json();
       if (result.success) {
+        // เมื่อ API บันทึกสำเร็จ อัปเดต State ทันที! (ปุ่มสร้างจะหายไป ปุ่ม New video จะขึ้นแทน)
         setChannelData(result.channel);
         setIsModalOpen(false);
       } else {
@@ -133,7 +132,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   };
 
   // ==========================================
-  // จัดการอัปโหลดโลโก้ช่อง และตำแหน่งลายน้ำ
+  // 4. ฟังก์ชันอัปโหลดโลโก้ช่อง และเปลี่ยนตำแหน่งลายน้ำ
   // ==========================================
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
@@ -142,9 +141,8 @@ export default function CreateMedia({ setCurrentScreen }) {
     
     reader.onloadend = async () => {
       const base64String = reader.result;
-      setChannelLogo(base64String); // อัปเดต UI ทันที
+      setChannelLogo(base64String); // อัปเดตโชว์บนหน้าจอทันที
 
-      // ยิง API บันทึกลง Database
       const userId = localStorage.getItem('currentUserId');
       if (userId && channelData) {
         try {
@@ -167,7 +165,6 @@ export default function CreateMedia({ setCurrentScreen }) {
 
   const handleWatermarkPosChange = async (newPos) => {
     setWatermarkPos(newPos);
-    // บันทึกตำแหน่งใหม่ลง Database ทันที
     const userId = localStorage.getItem('currentUserId');
     if (userId && channelData && channelLogo) {
       try {
@@ -186,7 +183,9 @@ export default function CreateMedia({ setCurrentScreen }) {
     }
   };
 
-
+  // ==========================================
+  // 5. โครงสร้างหน้าเว็บ (UI)
+  // ==========================================
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)] relative" style={{ fontFamily: 'var(--font-family)' }}>
       
@@ -201,9 +200,7 @@ export default function CreateMedia({ setCurrentScreen }) {
 
       <div className="flex-1 overflow-y-auto pb-[var(--nav-height)]" style={{ scrollbarWidth: 'none' }}>
         
-        {/* ======================================= */}
-        {/* 1. ส่วนแสดงข้อมูล Profile ของ User (ดึงจากผู้ใช้งาน) */}
-        {/* ======================================= */}
+        {/* --- ส่วนที่ 1: ข้อมูลผู้ใช้งานส่วนตัว (Dashboard บนสุด) --- */}
         <div className="mx-4 mt-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-[var(--card-shadow)]">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full border-2 border-[var(--icon-active)] overflow-hidden bg-[var(--app-bg)] p-0.5">
@@ -223,26 +220,25 @@ export default function CreateMedia({ setCurrentScreen }) {
             </div>
           </div>
 
-          {/* สถิติยอดถูกใจ คอมเมนต์ ผู้ติดตาม (ดึงจาก API ถ้าไม่มีก็จำลอง 0) */}
           <div className="grid grid-cols-4 gap-2 border-t border-[var(--border-color)] mt-4 pt-4">
             <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
               <Heart size={18} className="text-red-500 mb-1 filter drop-shadow-md"/>
-              <span className="text-sm font-bold">{userData?.stats?.likes || '0'}</span>
+              <span className="text-sm font-bold">{userData?.stats?.likes ?? '0'}</span>
               <span className="text-[9px] text-[var(--icon-inactive)]">ยอดถูกใจ</span>
             </div>
             <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
               <MessageCircle size={18} className="text-blue-500 mb-1 filter drop-shadow-md"/>
-              <span className="text-sm font-bold">{userData?.stats?.comments || '0'}</span>
+              <span className="text-sm font-bold">{userData?.stats?.comments ?? '0'}</span>
               <span className="text-[9px] text-[var(--icon-inactive)]">คอมเมนต์</span>
             </div>
             <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
               <Users size={18} className="text-green-500 mb-1 filter drop-shadow-md"/>
-              <span className="text-sm font-bold">{userData?.stats?.followers || '0'}</span>
+              <span className="text-sm font-bold">{userData?.stats?.followers ?? '0'}</span>
               <span className="text-[9px] text-[var(--icon-inactive)]">ผู้ติดตาม</span>
             </div>
             <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
               <UserPlus size={18} className="text-purple-500 mb-1 filter drop-shadow-md"/>
-              <span className="text-sm font-bold">{userData?.stats?.following || '0'}</span>
+              <span className="text-sm font-bold">{userData?.stats?.following ?? '0'}</span>
               <span className="text-[9px] text-[var(--icon-inactive)]">กำลังติดตาม</span>
             </div>
           </div>
@@ -263,15 +259,12 @@ export default function CreateMedia({ setCurrentScreen }) {
           })}
         </div>
 
-        {/* ======================================= */}
-        {/* 2. ส่วนข้อมูลช่อง Channel และ Logo */}
-        {/* ======================================= */}
-        {channelData && (
+        {/* --- ส่วนที่ 2: ข้อมูลช่องของฉัน (Channel & Logo) - แสดงก็ต่อเมื่อมีข้อมูลช่องแล้วเท่านั้น --- */}
+        {channelData && channelData.id && (
           <div className="mx-4 mb-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-lg">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-4">
                 
-                {/* ระบบอัปโหลด Logo ช่อง */}
                 <div className="relative group cursor-pointer" onClick={() => logoInputRef.current.click()}>
                   <div className="w-16 h-16 rounded-xl bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] flex items-center justify-center overflow-hidden">
                     {channelLogo ? (
@@ -301,7 +294,6 @@ export default function CreateMedia({ setCurrentScreen }) {
               </button>
             </div>
 
-            {/* ระบบเลือกตำแหน่งลายน้ำ */}
             <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-3 border border-[var(--border-color)]">
               <p className="text-xs text-[var(--icon-inactive)] mb-2 flex items-center gap-1">
                 <MonitorPlay size={14} /> ตำแหน่งแสดงโลโก้ลายน้ำ (หน้า Video)
@@ -318,7 +310,6 @@ export default function CreateMedia({ setCurrentScreen }) {
               </select>
             </div>
 
-            {/* แสดงสถานะและแพ็กเกจช่อง */}
             <div className="flex items-center gap-2 mt-2">
               {channelData.status === 'pending' ? (
                 <div className="flex items-center gap-2 text-orange-500 bg-orange-500/10 px-3 py-2 rounded-lg w-full border border-orange-500/20">
@@ -347,18 +338,20 @@ export default function CreateMedia({ setCurrentScreen }) {
           </div>
         )}
 
-        {/* ปุ่ม New video หรือ สร้างช่องใหม่ */}
+        {/* --- ส่วนที่ 3: ปุ่มสร้างวิดีโอ (New Video หรือ Create Channel) --- */}
         <div className="flex gap-3 px-4 py-2">
           {isLoading ? (
             <button className="flex-1 bg-[var(--card-bg)] text-[var(--icon-inactive)] rounded-xl py-3 flex items-center justify-center font-bold border border-[var(--border-color)]">
               <Loader2 size={20} className="animate-spin mr-2" /> กำลังตรวจสอบ...
             </button>
-          ) : channelData ? (
+          ) : (channelData && channelData.id) ? (
+            /* ถ้าผู้ใช้มีข้อมูลช่องแล้ว จะแสดงปุ่ม New video เสมอ (ปุ่มสร้างช่องหายไป) */
             <button className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg">
               <Plus size={24} className="mb-0.5" strokeWidth={3} />
               New video
             </button>
           ) : (
+            /* ถ้าผู้ใช้ยังไม่มีข้อมูลช่อง จะแสดงปุ่ม สร้างช่องใหม่ */
             <button 
               onClick={openEditModal}
               className="flex-1 bg-[var(--icon-active)] text-white rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg"
@@ -406,9 +399,7 @@ export default function CreateMedia({ setCurrentScreen }) {
         </div>
       </div>
 
-      {/* ======================================= */}
-      {/* Modal สำหรับกรอกข้อมูลช่อง */}
-      {/* ======================================= */}
+      {/* --- ส่วนที่ 4: Modal สำหรับกรอกข้อมูลสร้าง/แก้ไขช่อง --- */}
       {isModalOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
