@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Heart, MessageCircle, Share2, Music, Plus, Check,
   Search, Tv, ShoppingCart, X, MapPin, 
-  Maximize2, Minimize2 // เพิ่มใหม่: ไอคอนขยายและย่อหน้าจอ
+  Maximize2, Minimize2 
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 
@@ -11,22 +11,28 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   const [province, setProvince] = useState("กำลังค้นหา...");
   
   // 1. ระบบจัดการ Tab และการติดตาม
-  const [activeTab, setActiveTab] = useState('ForYou'); // 'Following' หรือ 'ForYou'
+  const [activeTab, setActiveTab] = useState('ForYou'); 
   const [followedChannels, setFollowedChannels] = useState([]);
 
-
-
-  // เพิ่มใหม่: State และฟังก์ชันจัดการขยายหน้าจอ (Fullscreen)
+  // State และฟังก์ชันจัดการขยายหน้าจอ (Fullscreen)
   const [fullScreenId, setFullScreenId] = useState(null);
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
   };
 
+  // State สำหรับเก็บคุณภาพวิดีโอ (จำลองการเช็กความเร็วเน็ต)
+  const [videoQuality, setVideoQuality] = useState('med'); // 'low', 'med', 'high'
+
   useEffect(() => {
     const savedProvince = localStorage.getItem('userProvince');
     if (savedProvince) setProvince(savedProvince);
+    
+    // จำลองการตรวจสอบความเร็วอินเทอร์เน็ต เพื่อเลือกคุณภาพวิดีโอเริ่มต้น
+    // ในอนาคตสามารถใช้ navigator.connection เพื่อเช็กความเร็วได้
+    setVideoQuality('med'); 
   }, []);
 
+  // อัปเดตโครงสร้างข้อมูลให้ตรงกับตาราง Database (รองรับ 3 ระดับคุณภาพ)
   const [allVideos] = useState([
     {
       id: 1,
@@ -38,7 +44,10 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       comments: '1,204',
       shares: '8,500',
       avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-      cloudflareUrl: 'https://ลิงก์วิดีโอจริงจาก_Cloudflare_ของคุณ.mp4', 
+      // เตรียมพร้อมใช้ URL 3 ระดับจาก Database
+      url_low: 'https://www.w3schools.com/html/mov_bbb.mp4', 
+      url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
+      url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
       targetProvince: 'All' 
     },
     {
@@ -51,10 +60,22 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       comments: '450',
       shares: '600',
       avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-      cloudflareUrl: 'https://ลิงก์วิดีโอจริงจาก_Cloudflare_คลิปที่2.mp4',
+      // เตรียมพร้อมใช้ URL 3 ระดับจาก Database
+      url_low: 'https://www.w3schools.com/html/mov_bbb.mp4',
+      url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
+      url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
       targetProvince: 'กรุงเทพมหานคร'
     }
   ]);
+
+  // ฟังก์ชันเลือก URL วิดีโอตามคุณภาพ
+  const getVideoUrl = (video) => {
+    switch(videoQuality) {
+      case 'low': return video.url_low;
+      case 'high': return video.url_high;
+      default: return video.url_med;
+    }
+  };
 
   // 2. ฟังก์ชันกดติดตาม
   const toggleFollow = (channelName) => {
@@ -69,7 +90,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       return allVideos.filter(v => followedChannels.includes(v.channelName));
     }
 
-    // หน้า For You: ให้คะแนนและจัดเรียง
     return [...allVideos].sort((a, b) => {
       let scoreA = 0;
       let scoreB = 0;
@@ -82,7 +102,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       if (followedChannels.includes(b.channelName)) scoreB += 5;
       if (b.targetProvince === 'All') scoreB += 1;
 
-      return scoreB - scoreA; // เรียงจากคะแนนมากไปน้อย
+      return scoreB - scoreA; 
     });
   }, [allVideos, province, activeTab, followedChannels]);
 
@@ -138,13 +158,12 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
         </div>
 
         <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area">
-          {/* ใช้ displayVideos ที่ผ่านการคิดคะแนนมาแล้วแทน videos แบบเดิม */}
           {displayVideos.length > 0 ? displayVideos.map((video) => (
-            // เพิ่มใหม่: เช็กว่าถ้าวิดีโอนี้ถูกกดขยาย ให้ใส่ class fixed เต็มหน้าจอ (z-[100])
             <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
+              {/* เรียกใช้ฟังก์ชัน getVideoUrl เพื่อเล่นวิดีโอตามคุณภาพเน็ต */}
               <video 
-                src={video.cloudflareUrl}
+                src={getVideoUrl(video)}
                 className="h-full w-full object-cover"
                 autoPlay 
                 loop 
@@ -152,7 +171,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                 playsInline
               />
 
-              {/* เพิ่มใหม่: ปุ่มไอคอน ขยาย/ย่อ อยู่มุมขวาบนของวิดีโอ */}
               <button 
                 onClick={() => toggleFullScreen(video.id)}
                 className="absolute top-20 right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
@@ -177,7 +195,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                     {video.tier}
                   </span>
                   
-                  {/* เพิ่มใหม่: ปุ่ม "ติดตาม" แบบป้ายข้อความข้างชื่อ */}
                   {!followedChannels.includes(video.channelName) && (
                     <button 
                       onClick={() => toggleFollow(video.channelName)}
@@ -203,7 +220,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                   <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)]">
                     <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
                   </div>
-                  {/* ปุ่ม Follow ซ่อนเมื่อกดติดตามแล้ว */}
                   {!followedChannels.includes(video.channelName) && (
                     <button 
                       onClick={() => toggleFollow(video.channelName)}
@@ -271,7 +287,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
         </div>
       )}
 
-{/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
+      {/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
       <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
         <BottomNav 
           activeMenu="media" 

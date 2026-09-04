@@ -5,12 +5,13 @@ import RegisterBasic from './pages/RegisterBasic';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
-import Media from './pages/Media'; // 1. เพิ่มการ Import หน้า Media
+import Media from './pages/Media'; 
 import { ArrowRight, Sparkles } from 'lucide-react';
+// นำเข้า BottomNav มาเพื่อใช้แสดงชั่วคราวในหน้าที่ยังสร้างไม่เสร็จ
+import BottomNav from './components/BottomNav';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
-    // 2. ถ้าล็อกอินค้างไว้ ให้โหลดหน้า 'media' เป็นหน้าแรกแทน 'home'
     if (localStorage.getItem('currentUserId')) return 'media';
     if (!localStorage.getItem('isFirstTime')) return 'intro';
     return 'login';
@@ -45,7 +46,7 @@ export default function App() {
       return (
         <Login 
           onBack={() => setCurrentScreen('intro')} 
-          onLoginSuccess={() => setCurrentScreen('media')} // 3. ล็อกอินเสร็จให้เด้งไปหน้า 'media' ทันที
+          onLoginSuccess={() => setCurrentScreen('media')} 
           onRegisterClick={() => setCurrentScreen('register')} 
           onForgotPasswordClick={() => console.log('Navigate to Forgot Password')}
         />
@@ -61,14 +62,12 @@ export default function App() {
       );
     }
 
-// 4. บล็อกแสดงผลหน้า Media (TikTok Feed)
     if (currentScreen === 'media') {
       return (
         <Media setCurrentScreen={setCurrentScreen} /> 
       );
     }
 
-    // หน้า Home เดิม (เก็บไว้เผื่อกดเข้าจาก Sidebar)
     if (currentScreen === 'home') {
       return (
         <Home onGoToProfile={() => setCurrentScreen('profile')} />
@@ -84,7 +83,7 @@ export default function App() {
     if (currentScreen === 'profile') {
       return (
         <Profile 
-          onBack={() => setCurrentScreen('media')} // กดกลับจากโปรไฟล์ให้มาที่ media
+          onBack={() => setCurrentScreen('media')}
           onLogout={() => {
             localStorage.clear();
             sessionStorage.clear();
@@ -92,6 +91,33 @@ export default function App() {
           }} 
           onSettingsClick={() => setCurrentScreen('settings')}
         />
+      );
+    }
+
+    // ==========================================
+    // เพิ่มใหม่: บล็อกดักรับ 4 เมนูที่เหลือจาก BottomNav
+    // ==========================================
+
+    // 1. เมนู Chat
+    if (currentScreen === 'chat') {
+      // ชั่วคราว: ให้วิ่งไปเปิดหน้า Home แทน (เพราะปกติหน้า Home มักเป็นหน้ารายการแชท)
+      // หากคุณมีไฟล์ Chat.jsx แล้ว สามารถแก้เป็น return <Chat setCurrentScreen={setCurrentScreen} />; ได้เลย
+      return <Home onGoToProfile={() => setCurrentScreen('profile')} />;
+    }
+
+    // 2. เมนู Call, Contacts, Broadcast
+    if (currentScreen === 'call' || currentScreen === 'contacts' || currentScreen === 'broadcast') {
+      return (
+        <div className="flex flex-col h-[100dvh] bg-[var(--app-bg)] text-[var(--text-heading)]">
+          <div className="flex-1 flex flex-col items-center justify-center font-bold text-lg">
+            <span>หน้าจอ {currentScreen.toUpperCase()}</span>
+            <span className="text-sm text-[var(--icon-inactive)] font-normal mt-2">กำลังพัฒนา 🚧</span>
+          </div>
+          {/* ติดตั้ง BottomNav ไว้ให้ด้วย เพื่อให้คุณกดกลับมาหน้าอื่นได้ ไม่ค้างที่หน้าจอนี้ */}
+          <div className="shrink-0 w-full z-30 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
+            <BottomNav activeMenu={currentScreen} setCurrentScreen={setCurrentScreen} />
+          </div>
+        </div>
       );
     }
 
