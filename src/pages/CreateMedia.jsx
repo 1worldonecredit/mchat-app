@@ -1,20 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Image as ImageIcon, Scissors, Type, Smile, Frame, Plus, Inbox, 
-  Search, Play, Tv, Loader2, Clock, CheckCircle2, Crown, Star, Edit2, Upload, MonitorPlay
+  Search, Play, Tv, Loader2, Clock, CheckCircle2, Crown, Star, Edit2, Upload, MonitorPlay,
+  Heart, MessageCircle, Users, UserPlus, User
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
+import { fetchUserProfile } from '../utils/apiProfile'; // นำเข้า API สำหรับดึงข้อมูล User
 
 export default function CreateMedia({ setCurrentScreen }) {
+  // --- State สำหรับข้อมูลส่วนตัว User ---
+  const [userData, setUserData] = useState(null);
+
+  // --- State สำหรับข้อมูลช่อง ---
   const [channelData, setChannelData] = useState(null); 
   const [templates, setTemplates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // State สำหรับ โลโก้และตำแหน่งลายน้ำ
+  // --- State สำหรับ โลโก้และตำแหน่งลายน้ำ ---
   const [channelLogo, setChannelLogo] = useState(null);
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
 
+  // --- State สำหรับ Modal สร้าง/แก้ไขช่อง ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,19 +39,42 @@ export default function CreateMedia({ setCurrentScreen }) {
   ];
   const tabs = ['For You', 'Viral Song', 'Trendy', 'AI', 'Monthly Recap'];
 
+  // ==========================================
+  // ดึงข้อมูลทั้งหมดเมื่อเปิดหน้า (User Profile + Channel)
+  // ==========================================
   useEffect(() => {
     const fetchRealData = async () => {
+      setIsLoading(true);
       try {
         const userId = localStorage.getItem('currentUserId');
         if (!userId) {
           setIsLoading(false);
           return;
         }
-        // จำลองว่าดึงข้อมูลช่องสำเร็จแล้ว เพื่อให้แสดงผลส่วนแก้ไขและโลโก้
-        // setChannelData(null); 
+
+        // 1. ดึงข้อมูล User (Profile, Username, Stats)
+        const userRes = await fetchUserProfile(userId);
+        if (userRes && userRes.success && userRes.profile) {
+          setUserData(userRes.profile);
+        }
+
+        // 2. ดึงข้อมูลช่อง (Channel Data) จาก API จริง
+        try {
+          const channelRes = await fetch(`/api/channels?userId=${userId}`);
+          if (channelRes.ok) {
+            const channelJson = await channelRes.json();
+            if (channelJson.success && channelJson.channel) {
+              setChannelData(channelJson.channel);
+              if (channelJson.channel.logo_url) setChannelLogo(channelJson.channel.logo_url);
+              if (channelJson.channel.watermark_position) setWatermarkPos(channelJson.channel.watermark_position);
+            }
+          }
+        } catch (apiErr) {
+          console.warn("ไม่สามารถเชื่อมต่อ API ข้อมูลช่องได้", apiErr);
+        }
+
       } catch (error) {
         console.error("เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
-        setChannelData(null); 
       } finally {
         setIsLoading(false);
       }
@@ -52,6 +82,9 @@ export default function CreateMedia({ setCurrentScreen }) {
     fetchRealData();
   }, []);
 
+  // ==========================================
+  // จัดการบันทึกช่องใหม่ / แก้ไขช่อง
+  // ==========================================
   const openEditModal = () => {
     if (channelData) {
       setFormData({
@@ -72,133 +105,155 @@ export default function CreateMedia({ setCurrentScreen }) {
     }
     setIsSubmitting(true);
     try {
-      setTimeout(() => {
-        setChannelData({
-          channel_name: formData.channelName,
+      const userId = localStorage.getItem('currentUserId');
+      const response = await fetch('/api/channels/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId,
+          channelName: formData.channelName,
           category: formData.category,
-          description: formData.description,
-          status: channelData?.status || 'pending', 
-          plan_type: channelData?.plan_type || 'free'
-        });
-        setIsSubmitting(false);
+          description: formData.description
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setChannelData(result.channel);
         setIsModalOpen(false);
-      }, 1000); 
+      } else {
+        alert(result.message || 'บันทึกไม่สำเร็จ');
+      }
     } catch (error) {
       console.error(error);
       alert("ไม่สามารถบันทึกช่องได้ในขณะนี้");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleLogoUpload = (e) => {
+  // ==========================================
+  // จัดการอัปโหลดโลโก้ช่อง และตำแหน่งลายน้ำ
+  // ==========================================
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setChannelLogo(reader.result);
-      // ตรงนี้สามารถเพิ่มโค้ดยิง API ไปบันทึกลงตาราง media_channel_logos ได้
+    
+    reader.onloadend = async () => {
+      const base64String = reader.result;
+      setChannelLogo(base64String); // อัปเดต UI ทันที
+
+      // ยิง API บันทึกลง Database
+      const userId = localStorage.getItem('currentUserId');
+      if (userId && channelData) {
+        try {
+          await fetch('/api/channels/logo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              logoBase64: base64String,
+              watermarkPosition: watermarkPos
+            })
+          });
+        } catch (err) {
+          console.error("อัปโหลดโลโก้ล้มเหลว", err);
+        }
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const renderChannelProfile = () => {
-    if (!channelData) return null;
-
-    return (
-      <div className="mx-4 mt-2 mb-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-lg">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-3">
-            <div className="relative group cursor-pointer" onClick={() => logoInputRef.current.click()}>
-              <div className="w-16 h-16 rounded-xl bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] flex items-center justify-center overflow-hidden">
-                {channelLogo ? (
-                  <img src={channelLogo} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <ImageIcon size={24} className="text-[var(--icon-inactive)]" />
-                )}
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-[var(--icon-active)] p-1.5 rounded-full text-white shadow-md">
-                <Upload size={12} strokeWidth={3} />
-              </div>
-              <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
-            </div>
-            
-            <div className="flex flex-col">
-              <h2 className="text-lg font-bold text-[var(--text-heading)]">{channelData.channel_name}</h2>
-              <span className="text-[10px] text-[var(--icon-active)] bg-[var(--icon-active)]/10 px-2 py-0.5 rounded-full w-fit mt-1">
-                {channelData.category === 'business' ? 'ธุรกิจและการลงทุน' : 
-                 channelData.category === 'education' ? 'การศึกษา / ให้ความรู้' : 
-                 channelData.category === 'lifestyle' ? 'ไลฟ์สไตล์ / บันเทิง' : 
-                 channelData.category === 'news' ? 'ข่าวสาร' : channelData.category}
-              </span>
-            </div>
-          </div>
-          <button onClick={openEditModal} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition bg-[var(--app-bg)] rounded-lg">
-            <Edit2 size={16} />
-          </button>
-        </div>
-
-        <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-3 border border-[var(--border-color)]">
-          <p className="text-xs text-[var(--icon-inactive)] mb-2 flex items-center gap-1">
-            <MonitorPlay size={14} /> ตำแหน่งลายน้ำโลโก้ (ในหน้า Media)
-          </p>
-          <select 
-            value={watermarkPos} 
-            onChange={(e) => setWatermarkPos(e.target.value)}
-            className="w-full bg-[var(--card-bg)] text-xs text-[var(--text-heading)] rounded-lg px-2 py-2 outline-none border border-[var(--border-color)] focus:border-[var(--icon-active)]"
-          >
-            <option value="top-left">มุมซ้ายบน</option>
-            <option value="top-right">มุมขวาบน</option>
-            <option value="bottom-left">มุมซ้ายล่าง</option>
-            <option value="bottom-right">มุมขวาล่าง</option>
-          </select>
-        </div>
-
-        {/* สถานะช่อง */}
-        <div className="flex items-center gap-2 mt-2">
-          {channelData.status === 'pending' ? (
-            <div className="flex items-center gap-2 text-orange-500 bg-orange-500/10 px-3 py-1.5 rounded-lg w-full">
-              <Clock size={16} />
-              <span className="text-xs font-bold">กำลังรอตรวจสอบ</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-1.5 rounded-lg w-full">
-              <CheckCircle2 size={16} />
-              <span className="text-xs font-bold">ผ่านเกณฑ์ (อนุมัติแล้ว)</span>
-            </div>
-          )}
-        </div>
-        
-        {channelData.status === 'approved' && (
-          <div className="flex items-center gap-2 mt-2 bg-[var(--app-bg)] p-2.5 rounded-lg border border-[var(--border-color)]">
-            {channelData.plan_type === 'monthly' ? (
-              <><Star size={16} className="text-purple-400 fill-current" /><span className="text-xs font-bold text-purple-400">ชำระรายเดือน (2 คลิป/วัน)</span></>
-            ) : channelData.plan_type === 'yearly' ? (
-              <><Crown size={16} className="text-yellow-500 fill-current" /><span className="text-xs font-bold text-yellow-500">ชำระรายปี VIP (5 คลิป/วัน)</span></>
-            ) : (
-              <><Tv size={16} className="text-[var(--icon-inactive)]" /><span className="text-xs font-bold text-[var(--icon-inactive)]">แพ็กเกจใช้งานฟรี</span></>
-            )}
-          </div>
-        )}
-      </div>
-    );
+  const handleWatermarkPosChange = async (newPos) => {
+    setWatermarkPos(newPos);
+    // บันทึกตำแหน่งใหม่ลง Database ทันที
+    const userId = localStorage.getItem('currentUserId');
+    if (userId && channelData && channelLogo) {
+      try {
+        await fetch('/api/channels/logo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            logoBase64: channelLogo,
+            watermarkPosition: newPos
+          })
+        });
+      } catch (err) {
+        console.error("อัปเดตตำแหน่งลายน้ำล้มเหลว", err);
+      }
+    }
   };
+
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)] relative" style={{ fontFamily: 'var(--font-family)' }}>
-      <div className="flex items-center justify-between p-4 bg-[var(--app-bg)] z-10">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-[var(--app-bg)] z-10 shadow-sm border-b border-[var(--border-color)]">
         <button onClick={() => setCurrentScreen('media')} className="p-1 hover:bg-[var(--card-bg)] rounded-full transition">
           <X size={24} className="text-[var(--text-heading)]" />
         </button>
-        <h1 className="text-lg font-bold tracking-widest">CREATE</h1>
+        <h1 className="text-lg font-bold tracking-widest">CREATOR STUDIO</h1>
         <div className="w-8"></div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-[var(--nav-height)]" style={{ scrollbarWidth: 'none' }}>
-        <div className="flex justify-between px-6 py-2">
+        
+        {/* ======================================= */}
+        {/* 1. ส่วนแสดงข้อมูล Profile ของ User (ดึงจากผู้ใช้งาน) */}
+        {/* ======================================= */}
+        <div className="mx-4 mt-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-[var(--card-shadow)]">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full border-2 border-[var(--icon-active)] overflow-hidden bg-[var(--app-bg)] p-0.5">
+              {userData?.avatar_url ? (
+                <img src={userData.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full rounded-full flex items-center justify-center bg-[var(--card-bg)]">
+                  <User size={24} className="text-[var(--icon-inactive)]" />
+                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[var(--text-heading)]">@{userData?.username || 'Username'}</h2>
+              <span className="text-[10px] text-[var(--app-bg)] font-bold bg-[var(--icon-active)] px-2 py-0.5 rounded-full inline-block mt-1 shadow-sm">
+                Creator Profile
+              </span>
+            </div>
+          </div>
+
+          {/* สถิติยอดถูกใจ คอมเมนต์ ผู้ติดตาม (ดึงจาก API ถ้าไม่มีก็จำลอง 0) */}
+          <div className="grid grid-cols-4 gap-2 border-t border-[var(--border-color)] mt-4 pt-4">
+            <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
+              <Heart size={18} className="text-red-500 mb-1 filter drop-shadow-md"/>
+              <span className="text-sm font-bold">{userData?.stats?.likes || '0'}</span>
+              <span className="text-[9px] text-[var(--icon-inactive)]">ยอดถูกใจ</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
+              <MessageCircle size={18} className="text-blue-500 mb-1 filter drop-shadow-md"/>
+              <span className="text-sm font-bold">{userData?.stats?.comments || '0'}</span>
+              <span className="text-[9px] text-[var(--icon-inactive)]">คอมเมนต์</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
+              <Users size={18} className="text-green-500 mb-1 filter drop-shadow-md"/>
+              <span className="text-sm font-bold">{userData?.stats?.followers || '0'}</span>
+              <span className="text-[9px] text-[var(--icon-inactive)]">ผู้ติดตาม</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-[var(--app-bg)] transition">
+              <UserPlus size={18} className="text-purple-500 mb-1 filter drop-shadow-md"/>
+              <span className="text-sm font-bold">{userData?.stats?.following || '0'}</span>
+              <span className="text-[9px] text-[var(--icon-inactive)]">กำลังติดตาม</span>
+            </div>
+          </div>
+        </div>
+
+        {/* แถบเครื่องมือ Tools */}
+        <div className="flex justify-between px-6 py-6">
           {tools.map((tool, idx) => {
             const Icon = tool.icon;
             return (
-              <div key={idx} className="flex flex-col items-center gap-1.5 cursor-pointer hover:opacity-80 transition">
+              <div key={idx} className="flex flex-col items-center gap-1.5 cursor-pointer hover:opacity-80 transition hover:scale-105">
                 <div className="bg-[var(--card-bg)] p-3 rounded-2xl border border-[var(--border-color)] shadow-[var(--card-shadow)]">
                   <Icon size={22} className="text-[var(--text-heading)]" />
                 </div>
@@ -208,12 +263,95 @@ export default function CreateMedia({ setCurrentScreen }) {
           })}
         </div>
 
-        {renderChannelProfile()}
+        {/* ======================================= */}
+        {/* 2. ส่วนข้อมูลช่อง Channel และ Logo */}
+        {/* ======================================= */}
+        {channelData && (
+          <div className="mx-4 mb-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-lg">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-4">
+                
+                {/* ระบบอัปโหลด Logo ช่อง */}
+                <div className="relative group cursor-pointer" onClick={() => logoInputRef.current.click()}>
+                  <div className="w-16 h-16 rounded-xl bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] flex items-center justify-center overflow-hidden">
+                    {channelLogo ? (
+                      <img src={channelLogo} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={24} className="text-[var(--icon-inactive)]" />
+                    )}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 bg-[var(--icon-active)] p-1.5 rounded-full text-white shadow-md">
+                    <Upload size={12} strokeWidth={3} />
+                  </div>
+                  <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                </div>
+                
+                <div className="flex flex-col">
+                  <h2 className="text-lg font-bold text-[var(--text-heading)]">{channelData.channel_name}</h2>
+                  <span className="text-[10px] text-[var(--icon-active)] bg-[var(--icon-active)]/10 px-2 py-0.5 rounded-full w-fit mt-1 border border-[var(--icon-active)]/30">
+                    {channelData.category === 'business' ? 'ธุรกิจและการลงทุน' : 
+                     channelData.category === 'education' ? 'การศึกษา / ให้ความรู้' : 
+                     channelData.category === 'lifestyle' ? 'ไลฟ์สไตล์ / บันเทิง' : 
+                     channelData.category === 'news' ? 'ข่าวสาร' : channelData.category}
+                  </span>
+                </div>
+              </div>
+              <button onClick={openEditModal} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition bg-[var(--app-bg)] rounded-lg shadow-sm border border-[var(--border-color)]">
+                <Edit2 size={16} />
+              </button>
+            </div>
 
-        <div className="flex gap-3 px-4 py-4">
+            {/* ระบบเลือกตำแหน่งลายน้ำ */}
+            <div className="bg-[var(--app-bg)] rounded-xl p-3 mb-3 border border-[var(--border-color)]">
+              <p className="text-xs text-[var(--icon-inactive)] mb-2 flex items-center gap-1">
+                <MonitorPlay size={14} /> ตำแหน่งแสดงโลโก้ลายน้ำ (หน้า Video)
+              </p>
+              <select 
+                value={watermarkPos} 
+                onChange={(e) => handleWatermarkPosChange(e.target.value)}
+                className="w-full bg-[var(--card-bg)] text-xs text-[var(--text-heading)] rounded-lg px-2 py-2 outline-none border border-[var(--border-color)] focus:border-[var(--icon-active)]"
+              >
+                <option value="top-left">มุมซ้ายบน</option>
+                <option value="top-right">มุมขวาบน</option>
+                <option value="bottom-left">มุมซ้ายล่าง</option>
+                <option value="bottom-right">มุมขวาล่าง</option>
+              </select>
+            </div>
+
+            {/* แสดงสถานะและแพ็กเกจช่อง */}
+            <div className="flex items-center gap-2 mt-2">
+              {channelData.status === 'pending' ? (
+                <div className="flex items-center gap-2 text-orange-500 bg-orange-500/10 px-3 py-2 rounded-lg w-full border border-orange-500/20">
+                  <Clock size={16} />
+                  <span className="text-xs font-bold">กำลังรอตรวจสอบ</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-2 rounded-lg w-full border border-green-500/20">
+                  <CheckCircle2 size={16} />
+                  <span className="text-xs font-bold">ผ่านเกณฑ์ (อนุมัติแล้ว)</span>
+                </div>
+              )}
+            </div>
+            
+            {channelData.status === 'approved' && (
+              <div className="flex items-center gap-2 mt-2 bg-[var(--app-bg)] p-2.5 rounded-lg border border-[var(--border-color)]">
+                {channelData.plan_type === 'monthly' ? (
+                  <><Star size={16} className="text-purple-400 fill-current" /><span className="text-xs font-bold text-purple-400">ชำระรายเดือน (2 คลิป/วัน)</span></>
+                ) : channelData.plan_type === 'yearly' ? (
+                  <><Crown size={16} className="text-yellow-500 fill-current" /><span className="text-xs font-bold text-yellow-500">ชำระรายปี VIP (5 คลิป/วัน)</span></>
+                ) : (
+                  <><Tv size={16} className="text-[var(--icon-inactive)]" /><span className="text-xs font-bold text-[var(--icon-inactive)]">แพ็กเกจใช้งานฟรี</span></>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ปุ่ม New video หรือ สร้างช่องใหม่ */}
+        <div className="flex gap-3 px-4 py-2">
           {isLoading ? (
-            <button className="flex-1 bg-white/10 text-[var(--icon-inactive)] rounded-xl py-3 flex items-center justify-center font-bold">
-              <Loader2 size={24} className="animate-spin mr-2" /> กำลังตรวจสอบ...
+            <button className="flex-1 bg-[var(--card-bg)] text-[var(--icon-inactive)] rounded-xl py-3 flex items-center justify-center font-bold border border-[var(--border-color)]">
+              <Loader2 size={20} className="animate-spin mr-2" /> กำลังตรวจสอบ...
             </button>
           ) : channelData ? (
             <button className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg">
@@ -236,7 +374,8 @@ export default function CreateMedia({ setCurrentScreen }) {
           </button>
         </div>
 
-        <div className="flex justify-between items-center px-4 mt-4 mb-3">
+        {/* Templates */}
+        <div className="flex justify-between items-center px-4 mt-6 mb-3">
           <h2 className="text-lg font-bold">Templates</h2>
           <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--text-heading)] transition cursor-pointer" />
         </div>
@@ -259,7 +398,7 @@ export default function CreateMedia({ setCurrentScreen }) {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-[var(--icon-inactive)]">
+            <div className="flex flex-col items-center justify-center py-10 text-[var(--icon-inactive)] bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
               <Frame size={40} className="mb-2 opacity-30" />
               <p className="text-sm">ไม่พบเทมเพลตในขณะนี้</p>
             </div>
@@ -267,6 +406,9 @@ export default function CreateMedia({ setCurrentScreen }) {
         </div>
       </div>
 
+      {/* ======================================= */}
+      {/* Modal สำหรับกรอกข้อมูลช่อง */}
+      {/* ======================================= */}
       {isModalOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
@@ -319,7 +461,7 @@ export default function CreateMedia({ setCurrentScreen }) {
               <button 
                 onClick={handleSaveChannel} 
                 disabled={isSubmitting} 
-                className="w-full bg-[var(--icon-active)] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4 hover:opacity-90 transition disabled:opacity-50 text-sm tracking-widest"
+                className="w-full bg-[var(--icon-active)] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4 hover:opacity-90 transition disabled:opacity-50 text-sm tracking-widest shadow-lg"
               >
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : (channelData ? <Check size={16} /> : <Plus size={16} strokeWidth={3} />)}
                 {isSubmitting ? 'กำลังบันทึก...' : (channelData ? 'บันทึกการแก้ไข' : 'สร้างช่อง Media')}
@@ -329,7 +471,8 @@ export default function CreateMedia({ setCurrentScreen }) {
         </div>
       )}
 
-      <div className="shrink-0 w-full z-40 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
+      {/* แถบล่างสุด: BottomNav */}
+      <div className="shrink-0 w-full z-40 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe shadow-[var(--nav-shadow)]">
         <BottomNav activeMenu="media" setCurrentScreen={setCurrentScreen} />
       </div>
     </div>
