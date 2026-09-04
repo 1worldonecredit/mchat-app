@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, CreditCard, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
-
+import BottomNav from '../components/BottomNav';
 export default function Profile({ onBack, onLogout, onSettingsClick }) {
   const [userData, setUserData] = useState({
     username: '', globalId: '', nationality: '', gender: '', dob: '', idCard: '', referrer: '',
@@ -560,6 +560,16 @@ const handleImageUpload = async (e, type) => {
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 {isSaving ? 'PROCESSING...' : 'SAVE CHANGES'}
               </button>
+
+
+              {/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
+      <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
+        <BottomNav
+          activeMenu="profile" // ระบุว่ากำลังแสดงหน้าโปรไฟล์
+          setCurrentScreen={setCurrentScreen}
+          onMenuChange={onMenuChange}
+        />
+      </div>
             </div>
           </div>
         </div>
