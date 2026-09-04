@@ -20,14 +20,14 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   };
 
   const [videoQuality, setVideoQuality] = useState('med'); 
-  const [myAvatar, setMyAvatar] = useState(null); // เก็บรูปโปรไฟล์ของคนล็อกอิน
+  const [myAvatar, setMyAvatar] = useState(null);
 
   useEffect(() => {
     const savedProvince = localStorage.getItem('userProvince');
     if (savedProvince) setProvince(savedProvince);
     setVideoQuality('med'); 
 
-    // ดึงรูปโปรไฟล์ผู้ใช้งานมาแสดงมุมขวาบน
+    // ดึงรูปโปรไฟล์ผู้ใช้งานมาแสดงที่ไอคอนเหนือปุ่มหัวใจ
     const userId = localStorage.getItem('currentUserId');
     if (userId) {
       fetchUserProfile(userId)
@@ -151,19 +151,8 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
           
           <div className="flex items-center gap-3 pointer-events-auto">
+            {/* นำรูป Profile ด้านบนออก เหลือแค่ปุ่มค้นหา */}
             <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] cursor-pointer transition" />
-            
-            {/* โซนรูปโปรไฟล์มุมขวาบน กดแล้วไปหน้า CREATE */}
-            <div 
-              onClick={() => setCurrentScreen('create_media')}
-              className="w-8 h-8 rounded-full border border-[var(--icon-active)] bg-[var(--card-bg)] overflow-hidden cursor-pointer hover:scale-105 transition shadow-lg flex items-center justify-center"
-            >
-              {myAvatar ? (
-                <img src={myAvatar} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <User size={16} className="text-[var(--icon-inactive)]" />
-              )}
-            </div>
           </div>
         </div>
 
@@ -225,14 +214,26 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
               </div>
 
               <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px]">
-                <div className="relative mb-2">
-                  <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)]">
-                    <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                
+                {/* โซนรูป Profile เหนือปุ่มหัวใจ */}
+                <div 
+                  className="relative mb-2 cursor-pointer hover:scale-105 transition"
+                  onClick={() => setCurrentScreen('create_media')} // กดเพื่อไปหน้าสร้างช่อง
+                >
+                  <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
+                    {myAvatar ? (
+                      <img src={myAvatar} alt="My Profile" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    )}
                   </div>
                   {!followedChannels.includes(video.channelName) && (
                     <button 
-                      onClick={() => toggleFollow(video.channelName)}
-                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95"
+                      onClick={(e) => {
+                        e.stopPropagation(); // ป้องกันการกด Plus แล้วทะลุไปเปิดหน้า Create
+                        toggleFollow(video.channelName);
+                      }}
+                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95 shadow-md"
                     >
                       <Plus size={14} strokeWidth={3} />
                     </button>
