@@ -20,14 +20,10 @@ export default function Profile({ onBack, onLogout, onSettingsClick , setCurrent
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
-useEffect(() => {
+  useEffect(() => {
     const userId = localStorage.getItem('currentUserId');
     if (userId) {
       loadProfileData(userId);
-    } else {
-      // เพิ่มบรรทัดนี้: ถ้าหา ID ไม่เจอ ให้สั่งปิดหน้าโหลดทันที จะได้ไม่หมุนค้าง
-      setIsLoadingProfile(false); 
-      console.warn("ไม่พบ currentUserId ใน LocalStorage อาจจะยังไม่ได้ล็อกอิน");
     }
   }, []);
 const loadProfileData = async (userId) => {
