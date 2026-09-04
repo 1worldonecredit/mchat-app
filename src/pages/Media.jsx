@@ -10,24 +10,21 @@ import { fetchUserProfile } from '../utils/apiProfile';
 export default function Media({ setCurrentScreen, onMenuChange }) {
   const [showCart, setShowCart] = useState(false);
   const [province, setProvince] = useState("กำลังค้นหา...");
-  
   const [activeTab, setActiveTab] = useState('ForYou'); 
   const [followedChannels, setFollowedChannels] = useState([]);
-
   const [fullScreenId, setFullScreenId] = useState(null);
+  const [videoQuality, setVideoQuality] = useState('med'); 
+  const [myAvatar, setMyAvatar] = useState(null);
+
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
   };
-
-  const [videoQuality, setVideoQuality] = useState('med'); 
-  const [myAvatar, setMyAvatar] = useState(null);
 
   useEffect(() => {
     const savedProvince = localStorage.getItem('userProvince');
     if (savedProvince) setProvince(savedProvince);
     setVideoQuality('med'); 
 
-    // ดึงรูปโปรไฟล์ผู้ใช้งานมาแสดงที่ไอคอนเหนือปุ่มหัวใจ
     const userId = localStorage.getItem('currentUserId');
     if (userId) {
       fetchUserProfile(userId)
@@ -40,6 +37,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     }
   }, []);
 
+  // เพิ่มข้อมูลจำลองสำหรับลายน้ำ (watermarkUrl, watermarkPos)
   const [allVideos] = useState([
     {
       id: 1,
@@ -54,7 +52,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       url_low: 'https://www.w3schools.com/html/mov_bbb.mp4', 
       url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      targetProvince: 'All' 
+      targetProvince: 'All',
+      watermarkUrl: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+      watermarkPos: 'top-left'
     },
     {
       id: 2,
@@ -69,7 +69,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       url_low: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      targetProvince: 'กรุงเทพมหานคร'
+      targetProvince: 'กรุงเทพมหานคร',
+      watermarkUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+      watermarkPos: 'top-right'
     }
   ]);
 
@@ -91,7 +93,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     if (activeTab === 'Following') {
       return allVideos.filter(v => followedChannels.includes(v.channelName));
     }
-
     return [...allVideos].sort((a, b) => {
       let scoreA = 0;
       let scoreB = 0;
@@ -104,6 +105,17 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       return scoreB - scoreA; 
     });
   }, [allVideos, province, activeTab, followedChannels]);
+
+  // ฟังก์ชันจัดตำแหน่งลายน้ำ
+  const getWatermarkPositionClass = (pos) => {
+    switch (pos) {
+      case 'top-left': return 'top-20 left-4';
+      case 'top-right': return 'top-20 right-16'; // หลบปุ่มย่อขยายจอ
+      case 'bottom-left': return 'bottom-40 left-4';
+      case 'bottom-right': return 'bottom-40 right-16'; // หลบไอคอนแชร์
+      default: return 'bottom-40 right-16';
+    }
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-[var(--app-bg)] overflow-hidden" style={{ fontFamily: 'var(--font-family)' }}>
@@ -121,8 +133,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       `}</style>
 
       <div className="flex-1 w-full relative overflow-hidden bg-black">
-        
-        {/* Top Navbar */}
         <div className="absolute top-0 left-0 w-full z-20 flex justify-between items-center px-4 py-4 bg-gradient-to-b from-[var(--app-bg)] to-transparent pointer-events-none">
           <div className="flex items-center gap-1 cursor-pointer pointer-events-auto">
             <Tv size={22} className="text-[var(--icon-active)]" />
@@ -151,7 +161,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
           
           <div className="flex items-center gap-3 pointer-events-auto">
-            {/* นำรูป Profile ด้านบนออก เหลือแค่ปุ่มค้นหา */}
             <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] cursor-pointer transition" />
           </div>
         </div>
@@ -168,6 +177,13 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                 muted 
                 playsInline
               />
+
+              {/* ลายน้ำโลโก้ช่อง */}
+              {video.watermarkUrl && (
+                <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
+                  <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
+                </div>
+              )}
 
               <button 
                 onClick={() => toggleFullScreen(video.id)}
@@ -192,7 +208,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                   <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
                     {video.tier}
                   </span>
-                  
                   {!followedChannels.includes(video.channelName) && (
                     <button 
                       onClick={() => toggleFollow(video.channelName)}
@@ -214,11 +229,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
               </div>
 
               <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px]">
-                
-                {/* โซนรูป Profile เหนือปุ่มหัวใจ */}
                 <div 
                   className="relative mb-2 cursor-pointer hover:scale-105 transition"
-                  onClick={() => setCurrentScreen('create_media')} // กดเพื่อไปหน้าสร้างช่อง
+                  onClick={() => setCurrentScreen('create_media')} 
                 >
                   <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
                     {myAvatar ? (
@@ -230,7 +243,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                   {!followedChannels.includes(video.channelName) && (
                     <button 
                       onClick={(e) => {
-                        e.stopPropagation(); // ป้องกันการกด Plus แล้วทะลุไปเปิดหน้า Create
+                        e.stopPropagation(); 
                         toggleFollow(video.channelName);
                       }}
                       className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95 shadow-md"
