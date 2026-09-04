@@ -7,7 +7,6 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Media from './pages/Media'; 
 import { ArrowRight, Sparkles } from 'lucide-react';
-// นำเข้า BottomNav มาเพื่อใช้แสดงชั่วคราวในหน้าที่ยังสร้างไม่เสร็จ
 import BottomNav from './components/BottomNav';
 
 export default function App() {
@@ -68,9 +67,15 @@ export default function App() {
       );
     }
 
-    if (currentScreen === 'home') {
+    // ==========================================
+    // รวบเงื่อนไข home และ chat เข้าด้วยกัน และส่ง setCurrentScreen ลงไป
+    // ==========================================
+    if (currentScreen === 'home' || currentScreen === 'chat') {
       return (
-        <Home onGoToProfile={() => setCurrentScreen('profile')} />
+        <Home 
+          onGoToProfile={() => setCurrentScreen('profile')} 
+          setCurrentScreen={setCurrentScreen} 
+        />
       );
     }
 
@@ -95,25 +100,15 @@ export default function App() {
     }
 
     // ==========================================
-    // เพิ่มใหม่: บล็อกดักรับ 4 เมนูที่เหลือจาก BottomNav
+    // หน้าจอรอการพัฒนา เติม w-full ป้องกัน Layout หดตัว
     // ==========================================
-
-    // 1. เมนู Chat
-    if (currentScreen === 'chat') {
-      // ชั่วคราว: ให้วิ่งไปเปิดหน้า Home แทน (เพราะปกติหน้า Home มักเป็นหน้ารายการแชท)
-      // หากคุณมีไฟล์ Chat.jsx แล้ว สามารถแก้เป็น return <Chat setCurrentScreen={setCurrentScreen} />; ได้เลย
-      return <Home onGoToProfile={() => setCurrentScreen('profile')} />;
-    }
-
-    // 2. เมนู Call, Contacts, Broadcast
     if (currentScreen === 'call' || currentScreen === 'contacts' || currentScreen === 'broadcast') {
       return (
-        <div className="flex flex-col h-[100dvh] bg-[var(--app-bg)] text-[var(--text-heading)]">
+        <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)]">
           <div className="flex-1 flex flex-col items-center justify-center font-bold text-lg">
             <span>หน้าจอ {currentScreen.toUpperCase()}</span>
             <span className="text-sm text-[var(--icon-inactive)] font-normal mt-2">กำลังพัฒนา 🚧</span>
           </div>
-          {/* ติดตั้ง BottomNav ไว้ให้ด้วย เพื่อให้คุณกดกลับมาหน้าอื่นได้ ไม่ค้างที่หน้าจอนี้ */}
           <div className="shrink-0 w-full z-30 bg-[var(--nav-bg)] border-t border-[var(--border-color)] pb-safe">
             <BottomNav activeMenu={currentScreen} setCurrentScreen={setCurrentScreen} />
           </div>
