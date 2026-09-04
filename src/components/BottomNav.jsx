@@ -6,7 +6,7 @@ export default function BottomNav({ activeMenu, onMenuChange, setCurrentScreen }
     { id: 'chat', icon: MessageSquare },
     { id: 'call', icon: Phone },
     { id: 'contacts', icon: Wallet },
-    { id: 'broadcast', icon: Radio },
+    { id: 'media', icon: Radio },
   ];
 
   // ฟังก์ชันตัวกลาง: ถ้ารับ onMenuChange มาก็ใช้ ถ้าไม่มีให้เช็ก setCurrentScreen
