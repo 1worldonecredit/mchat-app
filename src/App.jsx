@@ -8,6 +8,7 @@ import Settings from './pages/Settings';
 import Media from './pages/Media'; 
 import { ArrowRight, Sparkles } from 'lucide-react';
 import BottomNav from './components/BottomNav';
+import CreateMedia from './pages/CreateMedia';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
@@ -67,6 +68,12 @@ export default function App() {
       );
     }
 
+    if (currentScreen === 'create_media') {
+      return (
+        <CreateMedia setCurrentScreen={setCurrentScreen} /> 
+      );
+    }
+    
     // ==========================================
     // รวบเงื่อนไข home และ chat เข้าด้วยกัน และส่ง setCurrentScreen ลงไป
     // ==========================================

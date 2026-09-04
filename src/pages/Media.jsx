@@ -2,37 +2,44 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Heart, MessageCircle, Share2, Music, Plus, Check,
   Search, Tv, ShoppingCart, X, MapPin, 
-  Maximize2, Minimize2 
+  Maximize2, Minimize2, User
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
+import { fetchUserProfile } from '../utils/apiProfile'; 
 
 export default function Media({ setCurrentScreen, onMenuChange }) {
   const [showCart, setShowCart] = useState(false);
   const [province, setProvince] = useState("กำลังค้นหา...");
   
-  // 1. ระบบจัดการ Tab และการติดตาม
   const [activeTab, setActiveTab] = useState('ForYou'); 
   const [followedChannels, setFollowedChannels] = useState([]);
 
-  // State และฟังก์ชันจัดการขยายหน้าจอ (Fullscreen)
   const [fullScreenId, setFullScreenId] = useState(null);
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
   };
 
-  // State สำหรับเก็บคุณภาพวิดีโอ (จำลองการเช็กความเร็วเน็ต)
-  const [videoQuality, setVideoQuality] = useState('med'); // 'low', 'med', 'high'
+  const [videoQuality, setVideoQuality] = useState('med'); 
+  const [myAvatar, setMyAvatar] = useState(null); // เก็บรูปโปรไฟล์ของคนล็อกอิน
 
   useEffect(() => {
     const savedProvince = localStorage.getItem('userProvince');
     if (savedProvince) setProvince(savedProvince);
-    
-    // จำลองการตรวจสอบความเร็วอินเทอร์เน็ต เพื่อเลือกคุณภาพวิดีโอเริ่มต้น
-    // ในอนาคตสามารถใช้ navigator.connection เพื่อเช็กความเร็วได้
     setVideoQuality('med'); 
+
+    // ดึงรูปโปรไฟล์ผู้ใช้งานมาแสดงมุมขวาบน
+    const userId = localStorage.getItem('currentUserId');
+    if (userId) {
+      fetchUserProfile(userId)
+        .then(res => {
+          if (res && res.success && res.profile && res.profile.avatar_url) {
+            setMyAvatar(res.profile.avatar_url);
+          }
+        })
+        .catch(err => console.error("โหลดรูปโปรไฟล์ล้มเหลว:", err));
+    }
   }, []);
 
-  // อัปเดตโครงสร้างข้อมูลให้ตรงกับตาราง Database (รองรับ 3 ระดับคุณภาพ)
   const [allVideos] = useState([
     {
       id: 1,
@@ -44,7 +51,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       comments: '1,204',
       shares: '8,500',
       avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-      // เตรียมพร้อมใช้ URL 3 ระดับจาก Database
       url_low: 'https://www.w3schools.com/html/mov_bbb.mp4', 
       url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
@@ -60,7 +66,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
       comments: '450',
       shares: '600',
       avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-      // เตรียมพร้อมใช้ URL 3 ระดับจาก Database
       url_low: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
       url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
@@ -68,7 +73,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     }
   ]);
 
-  // ฟังก์ชันเลือก URL วิดีโอตามคุณภาพ
   const getVideoUrl = (video) => {
     switch(videoQuality) {
       case 'low': return video.url_low;
@@ -77,14 +81,12 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     }
   };
 
-  // 2. ฟังก์ชันกดติดตาม
   const toggleFollow = (channelName) => {
     setFollowedChannels(prev => 
       prev.includes(channelName) ? prev.filter(c => c !== channelName) : [...prev, channelName]
     );
   };
 
-  // 3. อัลกอริทึมจัดเรียงฟีด (Smart Feed Logic)
   const displayVideos = useMemo(() => {
     if (activeTab === 'Following') {
       return allVideos.filter(v => followedChannels.includes(v.channelName));
@@ -93,22 +95,18 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     return [...allVideos].sort((a, b) => {
       let scoreA = 0;
       let scoreB = 0;
-      
       if (a.targetProvince === province) scoreA += 10;
       if (followedChannels.includes(a.channelName)) scoreA += 5;
       if (a.targetProvince === 'All') scoreA += 1;
-
       if (b.targetProvince === province) scoreB += 10;
       if (followedChannels.includes(b.channelName)) scoreB += 5;
       if (b.targetProvince === 'All') scoreB += 1;
-
       return scoreB - scoreA; 
     });
   }, [allVideos, province, activeTab, followedChannels]);
 
   return (
     <div className="h-full w-full flex flex-col bg-[var(--app-bg)] overflow-hidden" style={{ fontFamily: 'var(--font-family)' }}>
-      
       <style>{`
         .media-scroll-area::-webkit-scrollbar { display: none; }
         .media-scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
@@ -136,7 +134,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
           
           <div className="flex gap-4 font-bold text-sm pointer-events-auto">
-            {/* ปุ่ม Following */}
             <span 
               onClick={() => setActiveTab('Following')}
               className={`cursor-pointer transition ${activeTab === 'Following' ? 'text-[var(--text-heading)] relative flex flex-col items-center' : 'text-[var(--icon-inactive)] hover:text-[var(--text-heading)]'}`}
@@ -144,7 +141,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
               Following
               {activeTab === 'Following' && <div className="absolute -bottom-2 w-6 h-1 bg-[var(--icon-active)] rounded-full" style={{ boxShadow: '0 0 8px var(--icon-active)' }}></div>}
             </span>
-            {/* ปุ่ม For You */}
             <span 
               onClick={() => setActiveTab('ForYou')}
               className={`cursor-pointer transition ${activeTab === 'ForYou' ? 'text-[var(--text-heading)] relative flex flex-col items-center' : 'text-[var(--icon-inactive)] hover:text-[var(--text-heading)]'}`}
@@ -154,14 +150,27 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
             </span>
           </div>
           
-          <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] cursor-pointer transition pointer-events-auto" />
+          <div className="flex items-center gap-3 pointer-events-auto">
+            <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] cursor-pointer transition" />
+            
+            {/* โซนรูปโปรไฟล์มุมขวาบน กดแล้วไปหน้า CREATE */}
+            <div 
+              onClick={() => setCurrentScreen('create_media')}
+              className="w-8 h-8 rounded-full border border-[var(--icon-active)] bg-[var(--card-bg)] overflow-hidden cursor-pointer hover:scale-105 transition shadow-lg flex items-center justify-center"
+            >
+              {myAvatar ? (
+                <img src={myAvatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={16} className="text-[var(--icon-inactive)]" />
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area">
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
-              {/* เรียกใช้ฟังก์ชัน getVideoUrl เพื่อเล่นวิดีโอตามคุณภาพเน็ต */}
               <video 
                 src={getVideoUrl(video)}
                 className="h-full w-full object-cover"
@@ -287,7 +296,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
         </div>
       )}
 
-      {/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
       <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
         <BottomNav 
           activeMenu="media" 
