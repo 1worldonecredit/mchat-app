@@ -2,15 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Music, RefreshCw, Wand2, Sparkles, ChevronDown, 
   Play, Smartphone, Gamepad2, Image as ImageIcon, 
-  Upload, Clock, Edit3, CheckCircle2, Calendar, Loader2
+  Upload, Clock, Edit3, CheckCircle2, Calendar, Loader2,
+  Heart, MessageCircle, Share2, Eye
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
 
 export default function CameraStudio({ setCurrentScreen }) {
-  // ==========================================
-  // 1. State ทั้งหมดสำหรับควบคุม UI และข้อมูล
-  // ==========================================
+  // === [ส่วนที่ 1: ตั้งค่า STATE สำหรับควบคุม UI และเก็บข้อมูล] ===
   const [mainMode, setMainMode] = useState('CREATE');
   const [recordMode, setRecordMode] = useState('15s');
   const [liveMode, setLiveMode] = useState('Device camera');
@@ -18,18 +17,52 @@ export default function CameraStudio({ setCurrentScreen }) {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
+  const outroInputRef = useRef(null); // ตัวอ้างอิงสำหรับอัปโหลดภาพปิดหน้า
 
-  const [pendingVideos, setPendingVideos] = useState([]); // เก็บรายการที่ดึงจาก DB
-  const [editingVideo, setEditingVideo] = useState(null); // เก็บข้อมูลชั่วคราวตอนกรอก Modal
+  const [pendingVideos, setPendingVideos] = useState([]); 
+  const [editingVideo, setEditingVideo] = useState(null); 
   const [isForever, setIsForever] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
 
-  // ==========================================
-  // 2. เปิดกล้อง & ดึงข้อมูล Draft จาก Database
-  // ==========================================
+  // === [ส่วนที่ 2: ฟังก์ชันตัวช่วยต่างๆ (วันที่, Timezone, URL)] ===
+  
+  // 2.1 จัดการ URL รูปภาพและวิดีโอ
+  const getMediaUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
+  // 2.2 ดึงวันที่ปัจจุบันมาเป็นค่า Default (รูปแบบ YYYY-MM-DDThh:mm)
+  const getCurrentLocalDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
+
+  // 2.3 แปลงวันที่เป็นรูปแบบภาษาไทย (พ.ศ.) แสดงผลให้ User ดูง่ายๆ
+  const formatThaiDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    }) + ' น.';
+  };
+
+  // 2.4 คำนวณอายุวิดีโอ (เช่น โพสต์เมื่อ 2 วันที่แล้ว)
+  const calculateDaysAgo = (dateString) => {
+    if (!dateString) return 'ร่าง (Draft)';
+    const past = new Date(dateString);
+    const diffTime = Math.abs(new Date() - past);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    if (diffDays === 0) return 'วันนี้';
+    return `${diffDays} วันที่แล้ว`;
+  };
+
+  // === [ส่วนที่ 3: เปิดกล้อง และดึงข้อมูลจาก API เมื่อเริ่มทำงาน] ===
   useEffect(() => {
-    // 2.1 เปิดกล้อง
     let stream = null;
     const startCamera = async () => {
       try {
@@ -41,17 +74,15 @@ export default function CameraStudio({ setCurrentScreen }) {
     };
     startCamera();
 
-    // 2.2 ดึงข้อมูลวิดีโอรอตรวจจาก API
     const fetchPendingVideos = async () => {
       setIsLoadingDrafts(true);
       try {
         const userId = localStorage.getItem('currentUserId');
         if (!userId) return;
+        
         const res = await fetch(`${API_URL}/api/videos/pending?userId=${userId}`);
         const data = await res.json();
-        if (data.success) {
-          setPendingVideos(data.videos);
-        }
+        if (data.success) setPendingVideos(data.videos);
       } catch (err) {
         console.error("ดึงข้อมูล Draft ล้มเหลว", err);
       } finally {
@@ -65,31 +96,35 @@ export default function CameraStudio({ setCurrentScreen }) {
     };
   }, []);
 
-  // ==========================================
-  // 3. ฟังก์ชันจำลองการอัปโหลดเข้า UI ก่อนส่ง API
-  // ==========================================
+  // === [ส่วนที่ 4: ฟังก์ชันจัดการการอัปโหลดไฟล์ในหน้าต่างจำลอง] ===
   const handleVideoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
     const videoUrl = URL.createObjectURL(file);
-    // สร้าง Object ชั่วคราวเพื่อนำไปกรอกใน Modal
+    const defaultDate = getCurrentLocalDateTime(); // ดึงวันที่ปัจจุบัน
+    
     const newVideo = {
-      isNew: true, // แฟล็กบอกว่าเป็นไฟล์ใหม่
+      isNew: true, 
       videoFile: file,
       coverFile: null,
+      outroCoverFile: null, // เพิ่มไฟล์ปิดหน้า
       video_url: videoUrl,
+      url_high: videoUrl,
       title: '',
       category: '',
       description: '',
       cover_url: '',
-      publish_date: '',
+      outro_cover_url: '', // รูปปิดหน้า
+      publish_date: defaultDate, // ตั้งค่าเริ่มต้นเป็นเวลาปัจจุบัน
       expire_date: '',
       status: 'pending',
-      aspect_ratio: '9:16'
+      aspect_ratio: '9:16',
+      // ค่าเริ่มต้นสถิติ
+      views_count: 0, likes_count: 0, comments_count: 0, shares_count: 0
     };
-    setEditingVideo(newVideo); // เปิด Modal ทันที
-    // เคลียร์ input เพื่อให้อัปโหลดไฟล์เดิมซ้ำได้
+    
+    setEditingVideo(newVideo); 
     e.target.value = null; 
   };
 
@@ -100,9 +135,14 @@ export default function CameraStudio({ setCurrentScreen }) {
     setEditingVideo(prev => ({ ...prev, coverFile: file, cover_url: coverUrl }));
   };
 
-  // ==========================================
-  // 4. ฟังก์ชันส่งข้อมูลเข้า API (อัปโหลดจริง)
-  // ==========================================
+  const handleOutroCoverUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const outroUrl = URL.createObjectURL(file);
+    setEditingVideo(prev => ({ ...prev, outroCoverFile: file, outro_cover_url: outroUrl }));
+  };
+
+  // === [ส่วนที่ 5: ฟังก์ชันบันทึกข้อมูลและอัปโหลดไปที่ API (Backend)] ===
   const handleSaveVideoInfo = async () => {
     if (!editingVideo.title || !editingVideo.category) {
       alert("กรุณากรอกชื่อวิดีโอและประเภทให้ครบถ้วน");
@@ -123,11 +163,11 @@ export default function CameraStudio({ setCurrentScreen }) {
       if (editingVideo.publish_date) formData.append('publishDate', editingVideo.publish_date);
       if (!isForever && editingVideo.expire_date) formData.append('expireDate', editingVideo.expire_date);
       
-      // แนบไฟล์จริง
+      // แนบไฟล์วิดีโอ ภาพปก (เปิดหน้า) และภาพปิดหน้า
       if (editingVideo.videoFile) formData.append('videoFile', editingVideo.videoFile);
       if (editingVideo.coverFile) formData.append('coverFile', editingVideo.coverFile);
+      if (editingVideo.outroCoverFile) formData.append('outroCoverFile', editingVideo.outroCoverFile);
 
-      // ส่งไปที่ API
       const response = await fetch(`${API_URL}/api/videos/upload`, {
         method: 'POST',
         body: formData 
@@ -136,10 +176,9 @@ export default function CameraStudio({ setCurrentScreen }) {
       const result = await response.json();
       
       if (result.success) {
-        alert('ส่งข้อมูลให้ Admin ตรวจสอบสำเร็จ!');
-        // นำวิดีโอใหม่ที่ได้จาก API มาต่อหน้าลิสต์
+        alert('อัปโหลดและส่งข้อมูลให้ Admin ตรวจสอบสำเร็จ!');
         setPendingVideos(prev => [result.video, ...prev]);
-        setEditingVideo(null); // ปิด Modal
+        setEditingVideo(null); 
       } else {
         alert(result.message || 'บันทึกไม่สำเร็จ');
       }
@@ -152,17 +191,13 @@ export default function CameraStudio({ setCurrentScreen }) {
     }
   };
 
-  // ==========================================
-  // 5. โครงสร้าง UI (หน้าตาแอป)
-  // ==========================================
+  // === [ส่วนที่ 6: โครงสร้าง UI หน้าจอหลัก (กล้องและเครื่องมือ)] ===
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[#111] text-white relative overflow-hidden font-sans">
       
-      {/* วิดีโอพื้นหลัง (ภาพจากกล้องจริง) */}
       <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover z-0 bg-gray-900" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none"></div>
 
-      {/* Top Bar (เครื่องมือด้านบนและขวา) */}
       <div className="absolute top-0 w-full z-20 flex justify-between items-start p-6">
         <button onClick={() => setCurrentScreen('create_media')} className="p-2 hover:bg-white/10 rounded-full transition">
           <X size={28} />
@@ -185,40 +220,53 @@ export default function CameraStudio({ setCurrentScreen }) {
         </div>
       </div>
 
-      {/* ควบคุมส่วนกลางและล่าง */}
       <div className="absolute bottom-[80px] w-full z-20 flex flex-col items-center">
         
-        {/* แถบรายการรอตรวจ (ดึงมาจาก API) */}
+        {/* === [ส่วนที่ 7: รายการวิดีโอรอตรวจ พร้อมสถิติ] === */}
         <div className="w-full px-4 mb-4">
           <h3 className="text-xs font-bold text-gray-300 mb-2 flex items-center gap-1">
-            <Clock size={14} /> รายการรอตรวจสอบ {isLoadingDrafts && <Loader2 size={12} className="animate-spin" />}
+            <Clock size={14} /> รายการของฉัน (รอดำเนินการ/แก้ไข) 
+            {isLoadingDrafts && <Loader2 size={12} className="animate-spin ml-2" />}
           </h3>
+          
           <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 min-h-[70px]">
             {pendingVideos.map(video => (
               <div 
                 key={video.id} 
-                // หากคลิกรายการเก่าที่อัปโหลดไปแล้ว ให้เปิด Modal เพื่อดูรายละเอียด (ระบบแก้อาจต้องมี API อัปเดตต่างหาก)
                 onClick={() => setEditingVideo({ ...video, isNew: false })} 
-                className="relative w-16 h-16 rounded-lg bg-gray-800 border-2 border-orange-500 overflow-hidden cursor-pointer shrink-0"
+                className="relative w-28 h-36 rounded-lg bg-gray-800 border border-white/20 overflow-hidden cursor-pointer shrink-0 group"
               >
-                {/* ถ้ามีรูปปกที่ดึงมาจาก API ให้แสดงรูปปก */}
+                {/* ภาพปก */}
                 {video.cover_url ? (
-                  <img src={video.cover_url.startsWith('http') ? video.cover_url : `${API_URL}${video.cover_url}`} alt="cover" className="w-full h-full object-cover opacity-70" />
+                  <img src={getMediaUrl(video.cover_url)} alt="cover" className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition" />
                 ) : (
-                  <video src={video.video_url?.startsWith('http') ? video.video_url : `${API_URL}${video.video_url}`} className="w-full h-full object-cover opacity-70" />
+                  <video src={getMediaUrl(video.url_high || video.video_url)} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition" />
                 )}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <Edit3 size={16} className="text-white drop-shadow-md" />
+                
+                {/* ข้อมูลสถิติที่ทับบนรูป */}
+                <div className="absolute inset-0 flex flex-col justify-between p-2">
+                  <span className="text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white self-start">
+                    {calculateDaysAgo(video.publish_date || video.created_at)}
+                  </span>
+                  
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex gap-1.5 items-center text-[9px] text-white font-bold drop-shadow-md">
+                      <span className="flex items-center gap-0.5"><Eye size={10} />{video.views_count || 0}</span>
+                      <span className="flex items-center gap-0.5"><Heart size={10} />{video.likes_count || 0}</span>
+                    </div>
+                    <Edit3 size={14} className="text-white drop-shadow-md" />
+                  </div>
                 </div>
               </div>
             ))}
+            
             {!isLoadingDrafts && pendingVideos.length === 0 && (
-              <p className="text-[10px] text-gray-400 italic">ยังไม่มีรายการรอตรวจสอบ</p>
+              <p className="text-[10px] text-gray-400 italic mt-2">ยังไม่มีรายการ</p>
             )}
           </div>
         </div>
 
-        {/* โหมด CREATE */}
+        {/* UI โหมดต่างๆ */}
         {mainMode === 'CREATE' && (
           <>
             <div className="flex gap-6 overflow-x-auto px-4 mb-6 text-sm font-semibold text-gray-300 w-full justify-center hide-scrollbar">
@@ -228,33 +276,20 @@ export default function CameraStudio({ setCurrentScreen }) {
             </div>
 
             <div className="flex items-center justify-center gap-8 w-full px-8 mb-6">
-              <div className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center overflow-hidden border border-white/30">
-                <ImageIcon size={20} />
-              </div>
-              
-              {/* ปุ่มชัตเตอร์ */}
-              <div className="w-20 h-20 rounded-full border-4 border-white/50 flex items-center justify-center p-1 cursor-pointer">
-                <div className="w-full h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"></div>
-              </div>
-              
-              {/* ปุ่มอัปโหลด */}
+              <div className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center overflow-hidden border border-white/30"><ImageIcon size={20} /></div>
+              <div className="w-20 h-20 rounded-full border-4 border-white/50 flex items-center justify-center p-1 cursor-pointer"><div className="w-full h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"></div></div>
               <div onClick={() => fileInputRef.current.click()} className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-xl flex flex-col items-center justify-center overflow-hidden border border-white/30 cursor-pointer hover:bg-white/20 transition">
-                <Upload size={18} />
-                <span className="text-[8px] mt-0.5 font-bold">Upload</span>
+                <Upload size={18} /><span className="text-[8px] mt-0.5 font-bold">Upload</span>
               </div>
               <input type="file" accept="video/*" ref={fileInputRef} className="hidden" onChange={handleVideoUpload} />
             </div>
           </>
         )}
 
-        {/* โหมด LIVE */}
         {mainMode === 'LIVE' && (
           <div className="w-full px-6 flex flex-col items-center mb-6">
             <div className="w-full bg-black/40 backdrop-blur-md rounded-2xl p-4 flex justify-between items-center mb-6 border border-white/10">
-              <div className="flex flex-col">
-                <span className="font-bold text-sm">Try practice mode</span>
-                <span className="text-[11px] text-gray-300">This mode is only visible to you</span>
-              </div>
+              <div className="flex flex-col"><span className="font-bold text-sm">Try practice mode</span><span className="text-[11px] text-gray-300">This mode is only visible to you</span></div>
               <button className="bg-white/20 border border-white/30 px-4 py-1.5 rounded-full text-sm font-bold">Go</button>
             </div>
             <button className="w-full bg-[#ff3b5c] text-white font-bold py-4 rounded-full text-lg mb-6 shadow-lg shadow-red-500/20 active:scale-95 transition">Go LIVE</button>
@@ -266,7 +301,6 @@ export default function CameraStudio({ setCurrentScreen }) {
         )}
       </div>
 
-      {/* เมนูหลักล่างสุด */}
       <div className="absolute bottom-0 w-full bg-black/80 backdrop-blur-lg pb-safe pt-2 z-30">
         <div className="flex justify-center gap-8 text-sm font-bold text-gray-400 pb-2">
           {['POST', 'CREATE', 'LIVE'].map((tab) => (
@@ -275,9 +309,7 @@ export default function CameraStudio({ setCurrentScreen }) {
         </div>
       </div>
 
-      {/* ======================================= */}
-      {/* Modal: กรอกข้อมูลและส่งให้ Admin ตรวจ */}
-      {/* ======================================= */}
+      {/* === [ส่วนที่ 8: Modal อัปโหลดข้อมูลวิดีโอ (ภาพหน้า, ภาพปิด, วันที่)] === */}
       {editingVideo && (
         <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center p-0 sm:p-4">
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
@@ -305,26 +337,39 @@ export default function CameraStudio({ setCurrentScreen }) {
                 </label>
               </div>
 
-              {/* Preview วิดีโอ/รูปปก (ปรับสัดส่วน 16:9 / 9:16 อัตโนมัติ) */}
-              <div className="flex flex-col items-center gap-2">
-                <div 
-                  onClick={() => coverInputRef.current.click()}
-                  className={`bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group transition-all duration-300 mx-auto
-                    ${editingVideo.aspect_ratio === '9:16' ? 'w-40 aspect-[9/16]' : 'w-full aspect-video'}
-                  `}
-                >
-                  {/* แสดงรูปปกที่เลือก หรือถ้ารูปเก่าจาก DB ก็เอามาแสดง */}
-                  {editingVideo.cover_url ? (
-                    <img src={editingVideo.cover_url.startsWith('blob') || editingVideo.cover_url.startsWith('http') ? editingVideo.cover_url : `${API_URL}${editingVideo.cover_url}`} alt="Cover" className="w-full h-full object-cover" />
-                  ) : (
-                    <video src={editingVideo.video_url?.startsWith('blob') || editingVideo.video_url?.startsWith('http') ? editingVideo.video_url : `${API_URL}${editingVideo.video_url}`} className="w-full h-full object-cover opacity-50" />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                    <ImageIcon size={24} className="text-white mb-1" />
-                    <span className="text-xs text-white">แตะเพื่อเปลี่ยนใบปิด (Cover)</span>
+              {/* อัปโหลดรูป ปกคลิป (หน้า) และ ปกท้าย (ปิดหน้า) */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* 1. ปกคลิปเปิด */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--icon-inactive)] uppercase font-bold">ภาพปกหน้า (Cover)</span>
+                  <div 
+                    onClick={() => coverInputRef.current.click()}
+                    className={`bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group transition-all duration-300 w-full ${editingVideo.aspect_ratio === '9:16' ? 'aspect-[9/16]' : 'aspect-video'}`}
+                  >
+                    {editingVideo.cover_url ? (
+                      <img src={getMediaUrl(editingVideo.cover_url)} alt="Cover" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-[var(--icon-inactive)]"><ImageIcon size={20} /><span className="text-[9px] mt-1">เลือกรูป</span></div>
+                    )}
                   </div>
+                  <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={handleCoverUpload} />
                 </div>
-                <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={handleCoverUpload} />
+
+                {/* 2. ปกปิดท้าย (Outro) */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--icon-inactive)] uppercase font-bold">ภาพปิดหน้า (Outro)</span>
+                  <div 
+                    onClick={() => outroInputRef.current.click()}
+                    className={`bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-inactive)] rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group transition-all duration-300 w-full ${editingVideo.aspect_ratio === '9:16' ? 'aspect-[9/16]' : 'aspect-video'}`}
+                  >
+                    {editingVideo.outro_cover_url ? (
+                      <img src={getMediaUrl(editingVideo.outro_cover_url)} alt="Outro" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-[var(--icon-inactive)]"><ImageIcon size={20} /><span className="text-[9px] mt-1">เลือกรูป</span></div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" ref={outroInputRef} className="hidden" onChange={handleOutroCoverUpload} />
+                </div>
               </div>
 
               {/* ฟอร์มข้อมูล */}
@@ -348,22 +393,43 @@ export default function CameraStudio({ setCurrentScreen }) {
                 <textarea value={editingVideo.description} onChange={e => setEditingVideo({...editingVideo, description: e.target.value})} className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm min-h-[60px]" placeholder="เขียนอธิบายเกี่ยวกับวิดีโอนี้..." />
               </div>
 
-              {/* ตั้งเวลาเผยแพร่ */}
+              {/* การตั้งเวลาเผยแพร่ และแปลงเวลาไทย */}
               <div className="bg-[var(--app-bg)] p-3 rounded-xl border border-[var(--border-color)]">
-                <h4 className="text-xs font-bold mb-3 flex items-center gap-1"><Calendar size={14} className="text-[var(--icon-active)]" /> ตั้งเวลาเผยแพร่</h4>
+                <h4 className="text-xs font-bold mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-1"><Calendar size={14} className="text-[var(--icon-active)]" /> ตั้งเวลาเผยแพร่</span>
+                  <span className="text-[9px] font-normal text-[var(--icon-inactive)] bg-[var(--card-bg)] px-2 py-0.5 rounded-full border border-[var(--border-color)]">อิงตามเวลาท้องถิ่น</span>
+                </h4>
+                
                 <div className="mb-3">
                   <label className="text-[10px] text-[var(--icon-inactive)] mb-1 block">วันที่เริ่ม Post</label>
-                  <input type="datetime-local" value={editingVideo.publish_date} onChange={e => setEditingVideo({...editingVideo, publish_date: e.target.value})} className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none" />
+                  <input 
+                    type="datetime-local" 
+                    value={editingVideo.publish_date} 
+                    onChange={e => setEditingVideo({...editingVideo, publish_date: e.target.value})} 
+                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none mb-1" 
+                  />
+                  {/* แสดงการแปลงเวลาเป็นภาษาไทยให้เห็นชัดเจน */}
+                  <p className="text-[9px] text-[var(--icon-active)]">📌 เวลาไทย: {formatThaiDate(editingVideo.publish_date)}</p>
                 </div>
-                <div>
+                
+                <div className="border-t border-[var(--border-color)] pt-3">
                   <div className="flex items-center gap-2 mb-2">
                     <input type="checkbox" id="forever" checked={isForever} onChange={(e) => setIsForever(e.target.checked)} className="accent-[var(--icon-active)]" />
-                    <label htmlFor="forever" className="text-[11px]">โพสต์ตลอดไป (ไม่มีวันหมดอายุ)</label>
+                    <label htmlFor="forever" className="text-[11px] font-bold">โพสต์ตลอดไป (ไม่มีวันหมดอายุ)</label>
                   </div>
+                  
                   {!isForever && (
                     <div>
-                      <label className="text-[10px] text-[var(--icon-inactive)] mb-1 block">วันที่สิ้นสุดการ Post</label>
-                      <input type="datetime-local" value={editingVideo.expire_date} onChange={e => setEditingVideo({...editingVideo, expire_date: e.target.value})} className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none" />
+                      <label className="text-[10px] text-[var(--icon-inactive)] mb-1 block mt-2">วันที่สิ้นสุดการ Post</label>
+                      <input 
+                        type="datetime-local" 
+                        value={editingVideo.expire_date} 
+                        onChange={e => setEditingVideo({...editingVideo, expire_date: e.target.value})} 
+                        className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none mb-1" 
+                      />
+                      {editingVideo.expire_date && (
+                        <p className="text-[9px] text-red-400">📌 หมดอายุเวลาไทย: {formatThaiDate(editingVideo.expire_date)}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -374,7 +440,7 @@ export default function CameraStudio({ setCurrentScreen }) {
                 <p className="text-[10px]">วิดีโอนี้จะยังไม่ถูกโพสต์สาธารณะ จนกว่าผู้ดูแลระบบ (Admin) จะทำการตรวจสอบและอนุมัติ</p>
               </div>
 
-              {/* ปุ่มส่งข้อมูล (กดได้เฉพาะไฟล์ใหม่ ถ้ากดดูไฟล์เก่าจะถูก Disable เพื่อให้เป็นโหมด View เท่านั้น) */}
+              {/* ปุ่มบันทึก */}
               <button 
                 onClick={handleSaveVideoInfo} 
                 disabled={isSubmitting || !editingVideo.isNew} 
@@ -383,6 +449,7 @@ export default function CameraStudio({ setCurrentScreen }) {
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                 {!editingVideo.isNew ? 'รอแอดมินตรวจสอบ...' : isSubmitting ? 'กำลังอัปโหลดและบันทึก...' : 'บันทึกและส่งให้ Admin ตรวจสอบ'}
               </button>
+
             </div>
           </div>
         </div>
