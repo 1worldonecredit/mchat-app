@@ -562,14 +562,7 @@ const handleImageUpload = async (e, type) => {
               </button>
 
 
-              {/* แถบล่างสุด: ส่งคำสั่งทั้ง 2 รูปแบบกลับไปให้ App.jsx */}
-      <div className="shrink-0 w-full z-30 bg-[var(--app-bg)] border-t border-[var(--border-color)] pb-safe">
-        <BottomNav
-          activeMenu="profile" // ระบุว่ากำลังแสดงหน้าโปรไฟล์
-          setCurrentScreen={setCurrentScreen}
-          onMenuChange={onMenuChange}
-        />
-      </div>
+
             </div>
           </div>
         </div>
