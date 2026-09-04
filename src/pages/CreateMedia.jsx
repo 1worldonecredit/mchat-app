@@ -345,9 +345,12 @@ export default function CreateMedia({ setCurrentScreen }) {
               <Loader2 size={20} className="animate-spin mr-2" /> กำลังตรวจสอบ...
             </button>
           ) : (channelData && channelData.id) ? (
-            <button className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg">
-              <Plus size={24} className="mb-0.5" strokeWidth={3} />
-              New video
+            <button 
+             onClick={() => setCurrentScreen('camera_studio')}
+             className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg"
+                >
+             <Plus size={24} className="mb-0.5" strokeWidth={3} />
+             New video
             </button>
           ) : (
             <button 

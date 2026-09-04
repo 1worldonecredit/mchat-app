@@ -9,6 +9,7 @@ import Media from './pages/Media';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import BottomNav from './components/BottomNav';
 import CreateMedia from './pages/CreateMedia';
+import CameraStudio from './pages/CameraStudio';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState(() => {
@@ -106,7 +107,9 @@ export default function App() {
         />
       );
     }
-
+      if (currentScreen === 'camera_studio') {
+          return <CameraStudio setCurrentScreen={setCurrentScreen} />;
+    }
     // ==========================================
     // หน้าจอรอการพัฒนา เติม w-full ป้องกัน Layout หดตัว
     // ==========================================
