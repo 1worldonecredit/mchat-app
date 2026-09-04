@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, CreditCard, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle} from 'lucide-react';
+import { ArrowLeft, LogOut, Settings, Lock, Edit2, Camera, ShieldCheck, AlertCircle, X, Check, CreditCard, Mail, Phone, User as UserIcon, Network, Briefcase, GraduationCap, MapPin, Users, HeartPulse, Shield, Loader2, PlayCircle, CheckCircle2} from 'lucide-react';
 import { fetchUserProfile, updateUserProfile, uploadUserImage } from '../utils/apiProfile'; 
 import BottomNav from '../components/BottomNav';
 export default function Profile({ onBack, onLogout, onSettingsClick , setCurrentScreen}) {
@@ -537,7 +537,6 @@ const handleImageUpload = async (e, type) => {
                 </div>
               )}
 
-              {/* ฟอร์มกรอกเลขบัตรประชาชน */}
               {editField === 'idcard' && (
                 <div>
                   <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">เลขประจำตัวประชาชน (13 หลัก)</label>
