@@ -7,13 +7,16 @@ import {
 import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
 
+// ประกาศตัวแปร API_URL แบบออโต้ ตาม Best Practice
+const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
+
 export default function CreateMedia({ setCurrentScreen }) {
   // ==========================================
   // 1. State ทั้งหมดที่ต้องใช้
   // ==========================================
-  const [userData, setUserData] = useState(null); // ข้อมูลผู้ใช้งานส่วนตัว
-  const [channelData, setChannelData] = useState(null); // ข้อมูลช่องของ User
-  const [templates, setTemplates] = useState([]); // เทมเพลต
+  const [userData, setUserData] = useState(null); 
+  const [channelData, setChannelData] = useState(null); 
+  const [templates, setTemplates] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
   const [channelLogo, setChannelLogo] = useState(null);
@@ -50,24 +53,22 @@ export default function CreateMedia({ setCurrentScreen }) {
           return;
         }
 
-        // ใช้ Promise.all ดึง 2 API พร้อมกัน เพื่อความรวดเร็วและแน่นอน
         const [userRes, channelRes] = await Promise.all([
           fetchUserProfile(userId).catch(() => null),
-          fetch(`/api/channels?userId=${userId}`).then(res => res.json()).catch(() => null)
+          // ใช้ API_URL ตามโครงสร้างที่ถูกต้อง
+          fetch(`${API_URL}/api/channels?userId=${userId}`).then(res => res.json()).catch(() => null)
         ]);
 
-        // 2.1 อัปเดตข้อมูลผู้ใช้ (สำหรับแถบด้านบน)
         if (userRes && userRes.success && userRes.profile) {
           setUserData(userRes.profile);
         }
 
-        // 2.2 อัปเดตข้อมูลช่อง (สำคัญมาก! ตัวตัดสินว่าปุ่มสร้างช่องจะหายไปหรือไม่)
         if (channelRes && channelRes.success && channelRes.channel) {
           setChannelData(channelRes.channel);
           if (channelRes.channel.logo_url) setChannelLogo(channelRes.channel.logo_url);
           if (channelRes.channel.watermark_position) setWatermarkPos(channelRes.channel.watermark_position);
         } else {
-          setChannelData(null); // ถ้าไม่มีช่องจริงๆ ให้แน่ใจว่าเป็น null
+          setChannelData(null); 
         }
 
       } catch (error) {
@@ -104,7 +105,7 @@ export default function CreateMedia({ setCurrentScreen }) {
     setIsSubmitting(true);
     try {
       const userId = localStorage.getItem('currentUserId');
-      const response = await fetch('/api/channels/save', {
+      const response = await fetch(`${API_URL}/api/channels/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +118,6 @@ export default function CreateMedia({ setCurrentScreen }) {
       
       const result = await response.json();
       if (result.success) {
-        // เมื่อ API บันทึกสำเร็จ อัปเดต State ทันที! (ปุ่มสร้างจะหายไป ปุ่ม New video จะขึ้นแทน)
         setChannelData(result.channel);
         setIsModalOpen(false);
       } else {
@@ -141,12 +141,12 @@ export default function CreateMedia({ setCurrentScreen }) {
     
     reader.onloadend = async () => {
       const base64String = reader.result;
-      setChannelLogo(base64String); // อัปเดตโชว์บนหน้าจอทันที
+      setChannelLogo(base64String); 
 
       const userId = localStorage.getItem('currentUserId');
       if (userId && channelData) {
         try {
-          await fetch('/api/channels/logo', {
+          await fetch(`${API_URL}/api/channels/logo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -168,7 +168,7 @@ export default function CreateMedia({ setCurrentScreen }) {
     const userId = localStorage.getItem('currentUserId');
     if (userId && channelData && channelLogo) {
       try {
-        await fetch('/api/channels/logo', {
+        await fetch(`${API_URL}/api/channels/logo`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -259,7 +259,7 @@ export default function CreateMedia({ setCurrentScreen }) {
           })}
         </div>
 
-        {/* --- ส่วนที่ 2: ข้อมูลช่องของฉัน (Channel & Logo) - แสดงก็ต่อเมื่อมีข้อมูลช่องแล้วเท่านั้น --- */}
+        {/* --- ส่วนที่ 2: ข้อมูลช่องของฉัน (Channel & Logo) --- */}
         {channelData && channelData.id && (
           <div className="mx-4 mb-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-4 shadow-lg">
             <div className="flex justify-between items-start mb-4">
@@ -345,13 +345,11 @@ export default function CreateMedia({ setCurrentScreen }) {
               <Loader2 size={20} className="animate-spin mr-2" /> กำลังตรวจสอบ...
             </button>
           ) : (channelData && channelData.id) ? (
-            /* ถ้าผู้ใช้มีข้อมูลช่องแล้ว จะแสดงปุ่ม New video เสมอ (ปุ่มสร้างช่องหายไป) */
             <button className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg">
               <Plus size={24} className="mb-0.5" strokeWidth={3} />
               New video
             </button>
           ) : (
-            /* ถ้าผู้ใช้ยังไม่มีข้อมูลช่อง จะแสดงปุ่ม สร้างช่องใหม่ */
             <button 
               onClick={openEditModal}
               className="flex-1 bg-[var(--icon-active)] text-white rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg"
