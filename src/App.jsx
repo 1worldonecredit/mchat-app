@@ -95,6 +95,7 @@ export default function App() {
             setCurrentScreen('login');
           }} 
           onSettingsClick={() => setCurrentScreen('settings')}
+          setCurrentScreen={setCurrentScreen} // <--- เพิ่มบรรทัดนี้จุดเดียว
         />
       );
     }
