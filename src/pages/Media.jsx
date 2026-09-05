@@ -18,6 +18,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   const [fullScreenId, setFullScreenId] = useState(null);
   const [videoQuality, setVideoQuality] = useState('med'); 
   const [myAvatar, setMyAvatar] = useState(null);
+  const [isMuted, setIsMuted] = useState(true); // เริ่มต้นให้ปิดเสียงไว้ก่อนเพื่อให้ Autoplay ทำงานได้
   
   // 🌟 เปลี่ยนจากการ Fix ค่า เป็น State ว่างๆ รอรับจาก API
   const [allVideos, setAllVideos] = useState([]);
@@ -178,14 +179,14 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
             <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
              <video 
-    src={getVideoUrl(video)}
-    className="h-full w-full object-cover cursor-pointer"
-    autoPlay 
-    loop 
-    muted={isMuted}
-    playsInline
-    onClick={() => setIsMuted(!isMuted)} 
-/>
+              src={getVideoUrl(video)}
+              className="h-full w-full object-cover cursor-pointer"
+              autoPlay 
+              loop 
+              muted={isMuted}
+              playsInline
+              onClick={() => setIsMuted(!isMuted)} 
+                />
 
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
