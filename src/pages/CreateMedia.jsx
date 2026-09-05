@@ -9,7 +9,6 @@ import { fetchUserProfile } from '../utils/apiProfile';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
 
-// ข้อมูลสำหรับ Dropdown วันที่แบบไทย
 const THAI_MONTHS = [
   { value: '01', label: 'มกราคม' }, { value: '02', label: 'กุมภาพันธ์' }, { value: '03', label: 'มีนาคม' },
   { value: '04', label: 'เมษายน' }, { value: '05', label: 'พฤษภาคม' }, { value: '06', label: 'มิถุนายน' },
@@ -33,16 +32,11 @@ export default function CreateMedia({ setCurrentScreen }) {
   const [channelLogo, setChannelLogo] = useState(null);
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
-  
-  // State สำหรับบันทึกโลโก้
-  const [isLogoChanged, setIsLogoChanged] = useState(false);
-  const [isSavingLogo, setIsSavingLogo] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ channelName: '', category: '', description: '' });
 
-  // State สำหรับ Edit Video Modal
   const [editingVideo, setEditingVideo] = useState(null);
   const [isSavingVideo, setIsSavingVideo] = useState(false);
   const [pubDay, setPubDay] = useState('01');
@@ -146,43 +140,43 @@ export default function CreateMedia({ setCurrentScreen }) {
   };
 
   // ==========================================
-  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้แบบมี Icon Save
+  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้อัตโนมัติ 100%
   // ==========================================
-  const handleLogoSelect = (e) => {
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setChannelLogo(reader.result); 
-      setIsLogoChanged(true); // แสดงปุ่มบันทึก
+    
+    reader.onloadend = async () => {
+      const base64String = reader.result;
+      setChannelLogo(base64String); // โชว์รูปบนหน้าจอทันที
+
+      const userId = localStorage.getItem('currentUserId');
+      if (userId) {
+        try {
+          await fetch(`${API_URL}/api/channels/logo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              logoBase64: base64String,
+              watermarkPosition: watermarkPos
+            })
+          });
+          alert("อัปโหลดและบันทึกโลโก้สำเร็จ!");
+        } catch (err) {
+          console.error("อัปโหลดโลโก้ล้มเหลว", err);
+          alert("ไม่สามารถบันทึกโลโก้ได้ (ไฟล์อาจใหญ่เกินไป)");
+        }
+      }
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleSaveLogo = async () => {
-    setIsSavingLogo(true);
-    const userId = localStorage.getItem('currentUserId');
-    if (userId && channelData) {
-      try {
-        await fetch(`${API_URL}/api/channels/logo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, logoBase64: channelLogo, watermarkPosition: watermarkPos })
-        });
-        setIsLogoChanged(false); // ซ่อนปุ่มเมื่อบันทึกเสร็จ
-        alert("บันทึกโลโก้เรียบร้อยแล้ว");
-      } catch (err) {
-        console.error("อัปโหลดโลโก้ล้มเหลว", err);
-      } finally {
-        setIsSavingLogo(false);
-      }
-    }
   };
 
   const handleWatermarkPosChange = async (newPos) => {
     setWatermarkPos(newPos);
     const userId = localStorage.getItem('currentUserId');
-    if (userId && channelData && channelLogo && !isLogoChanged) {
+    if (userId && channelData && channelLogo) {
       try {
         await fetch(`${API_URL}/api/channels/logo`, {
           method: 'POST',
@@ -194,7 +188,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   };
 
   // ==========================================
-  // 5. ฟังก์ชันแก้ไข Video (เวลาและสถานะ)
+  // 5. ฟังก์ชันแก้ไข Video
   // ==========================================
   const openVideoEditModal = (video) => {
     setEditingVideo(video);
@@ -234,8 +228,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   // ==========================================
   // 6. โครงสร้างหน้าเว็บ (UI)
   // ==========================================
-
-return (
+  return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)] relative" style={{ fontFamily: 'var(--font-family)' }}>
       
       {/* Header */}
@@ -297,7 +290,7 @@ return (
                     {channelLogo ? <img src={getMediaUrl(channelLogo)} alt="Logo" className="w-full h-full object-cover" /> : <ImageIcon size={24} className="text-[var(--icon-inactive)]" />}
                   </div>
                   <div className="absolute -bottom-2 -right-2 bg-[var(--icon-active)] p-1.5 rounded-full text-white shadow-md"><Upload size={12} strokeWidth={3} /></div>
-                  <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoSelect} />
+                  <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                 </div>
                 
                 <div className="flex flex-col">
@@ -305,13 +298,6 @@ return (
                   <span className="text-[10px] text-[var(--icon-active)] bg-[var(--icon-active)]/10 px-2 py-0.5 rounded-full w-fit mt-1 border border-[var(--icon-active)]/30">
                     {channelData.category === 'business' ? 'ธุรกิจและการลงทุน' : channelData.category === 'education' ? 'การศึกษา / ให้ความรู้' : channelData.category === 'lifestyle' ? 'ไลฟ์สไตล์ / บันเทิง' : channelData.category === 'news' ? 'ข่าวสาร' : channelData.category}
                   </span>
-                  
-                  {/* ปุ่ม Icon บันทึกโลโก้ จะแสดงเมื่อมีการเลือกรูปใหม่ */}
-                  {isLogoChanged && (
-                    <button onClick={handleSaveLogo} disabled={isSavingLogo} className="mt-2 bg-green-500 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 w-fit shadow-md hover:bg-green-600 transition">
-                      {isSavingLogo ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} บันทึกโลโก้
-                    </button>
-                  )}
                 </div>
               </div>
               <button onClick={openEditModal} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition bg-[var(--app-bg)] rounded-lg shadow-sm border border-[var(--border-color)]"><Edit2 size={16} /></button>
@@ -353,7 +339,7 @@ return (
           </button>
         </div>
 
-        {/* --- ส่วนที่ 4: แสดงวิดีโอ (เล่นได้จริง & ต้องกด Play ก่อนเท่านั้น) --- */}
+        {/* --- ส่วนที่ 4: แสดงวิดีโอ (แก้ไขโค้ด Video Player ให้เล่นได้จริง 100%) --- */}
         {channelData && channelData.id && (
           <>
             <div className="flex justify-between items-center px-4 mt-6 mb-3">
@@ -366,17 +352,20 @@ return (
                   {channelVideos.map(video => (
                     <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
                       
-                      {/* Video Player ที่ต้องกด Play */}
+                      {/* Video Player ที่ปรับแก้ Source และ Tag ให้เล่นได้ชัวร์ */}
                       <div className={`w-full bg-black relative ${video.aspect_ratio === '16:9' ? 'aspect-video' : 'aspect-[3/4]'}`}>
                         <video 
-                          src={getMediaUrl(video.url_high || video.video_url)} 
-                          poster={video.cover_url ? getMediaUrl(video.cover_url) : undefined}
                           controls 
-                          preload="metadata" // โหลดแค่ข้อมูลเริ่มต้น ไม่เปิดเล่นอัตโนมัติ
+                          preload="auto" 
                           playsInline 
                           controlsList="nodownload"
+                          poster={video.cover_url ? getMediaUrl(video.cover_url) : undefined}
                           className="w-full h-full object-contain relative z-10" 
-                        />
+                        >
+                          <source src={getMediaUrl(video.url_high || video.video_url)} type="video/mp4" />
+                          เบราว์เซอร์ของคุณไม่รองรับวิดีโอนี้
+                        </video>
+                        
                         {/* ป้ายสถานะ */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
                           {video.status === 'pending' && <span className="bg-orange-500/90 text-white text-[9px] px-2 py-0.5 rounded shadow">รอตรวจ</span>}
@@ -477,7 +466,7 @@ return (
         </div>
       )}
 
-      {/* --- Modal สำหรับแก้ไขเวลา/สถานะ Video (UI วันที่แบบไทย 5 ช่อง) --- */}
+      {/* --- Modal สำหรับแก้ไขเวลา/สถานะ Video --- */}
       {editingVideo && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
@@ -503,12 +492,11 @@ return (
                 </div>
               </div>
 
-              {/* ฟอร์มวันที่แบบไทย (เหมือนเป๊ะจากภาพตัวอย่าง) */}
+              {/* ฟอร์มวันที่แบบไทย */}
               <div className="border border-green-500/30 rounded-xl p-4 bg-green-500/5 relative">
                 <h4 className="text-xs font-bold text-green-500 mb-4 text-center">ตั้งเวลาเผยแพร่วิดีโอ</h4>
                 
                 <div className="flex flex-col items-center gap-3">
-                  {/* วัน เดือน ปี */}
                   <div className="flex items-center gap-2">
                     <select value={pubDay} onChange={(e) => setPubDay(e.target.value)} className="bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none text-center appearance-none">
                       {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -521,7 +509,6 @@ return (
                     </select>
                   </div>
 
-                  {/* เวลา ชั่วโมง นาที */}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[11px] text-[var(--icon-inactive)]">เวลา</span>
                     <select value={pubHour} onChange={(e) => setPubHour(e.target.value)} className="bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-2 py-2 text-xs outline-none text-center appearance-none">
@@ -552,7 +539,6 @@ return (
     </div>
   );
 }
-
   // ==========================================
   // 6. CreateMedia  บันทึกโลโก้ แสดง video  end
   // ==========================================
