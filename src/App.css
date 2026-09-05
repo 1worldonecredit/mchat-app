@@ -231,3 +231,31 @@
     background-color: #000;
   }
 }
+
+/* =========================================
+   จัดระเบียบ UI หน้าฟีดวิดีโอ (เฉพาะบนจอคอม Desktop)
+   ========================================= */
+@media (min-width: 1024px) {
+  /* ทำให้พื้นหลังสุดเป็นสีดำ/เทาเข้ม */
+  .media-scroll-area {
+    background-color: #0a0a0a !important; 
+  }
+
+  /* บังคับให้กรอบวิดีโอและ UI อยู่กึ่งกลางจอเสมอ */
+  .media-item-container {
+    margin: 0 auto !important;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* เพิ่มเงาให้ตัวกรอบดูลอยขึ้นมา */
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* กรอบสำหรับวิดีโอแนวตั้ง (9:16) - ล็อกความกว้างเท่าหน้าจอมือถือ */
+  .media-item-container.layout-9-16 {
+    max-width: 450px !important;
+  }
+
+  /* กรอบสำหรับวิดีโอแนวนอน (16:9) - ให้กว้างขึ้นแบบแนวนอน */
+  .media-item-container.layout-16-9 {
+    max-width: 900px !important; 
+  }
+}

@@ -174,19 +174,27 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area">
+        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area lg:bg-[#0a0a0a]">
           {displayVideos.length > 0 ? displayVideos.map((video) => (
-            <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
+            
+            <div 
+              key={video.id} 
+              className={`relative h-full w-full snap-start snap-always bg-black overflow-hidden mx-auto transition-all ${
+                video.aspectRatio === '16:9' 
+                  ? 'lg:max-w-[900px] lg:border-x lg:border-gray-800 lg:shadow-2xl' 
+                  : 'lg:max-w-[450px] lg:border-x lg:border-gray-800 lg:shadow-2xl'
+              } ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full !border-none' : ''}`}
+            >
               
-            <video 
-            src={getVideoUrl(video)}
-            className={`cursor-pointer media-video-player ${video.aspectRatio === '16:9' ? 'video-16-9' : 'video-9-16'}`}
-            autoPlay 
-            loop 
-            muted={isMuted}
-            playsInline
-            onClick={() => setIsMuted(!isMuted)} 
-            />
+              <video 
+                src={getVideoUrl(video)}
+                className="h-full w-full cursor-pointer object-cover lg:object-contain"
+                autoPlay 
+                loop 
+                muted={isMuted}
+                playsInline
+                onClick={() => setIsMuted(!isMuted)} 
+              />
 
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
@@ -292,6 +300,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
             </div>
           )}
         </div>
+        
       </div>
 
       {showCart && (
