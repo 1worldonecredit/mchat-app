@@ -46,8 +46,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     // 🌟 เรียกใช้ฟังก์ชันดึงวิดีโอเมื่อเปิดหน้านี้
     loadFeed();
   }, []);
-
-  // 🌟 ฟังก์ชันดึงข้อมูลจาก Database และแปลงให้เข้ากับ UI เดิม
+// 🌟 ฟังก์ชันดึงข้อมูลจาก Database และแปลงให้เข้ากับ UI เดิม
   const loadFeed = async () => {
     try {
       const res = await fetch(`${API_URL}/api/videos/feed`);
@@ -68,6 +67,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           url_high: v.url_high,
           cf_video_id: v.cf_video_id, // รหัส Cloudflare
           targetProvince: 'All', 
+          aspectRatio: v.aspect_ratio || '9:16', // 🌟 เพิ่มการดึงค่าสัดส่วนวิดีโอ (ค่าเริ่มต้นคือ 9:16)
           // จัดการ URL ลายน้ำ (ถ้ารูปมาจาก R2 จะเป็น http นำหน้าอยู่แล้ว)
           watermarkUrl: v.watermark_url ? (v.watermark_url.startsWith('http') ? v.watermark_url : `${API_URL}${v.watermark_url}`) : null,
           watermarkPos: v.watermark_position || 'bottom-right'
@@ -178,15 +178,15 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
-             <video 
-              src={getVideoUrl(video)}
-              className="h-full w-full object-cover cursor-pointer"
-              autoPlay 
-              loop 
-              muted={isMuted}
-              playsInline
-              onClick={() => setIsMuted(!isMuted)} 
-                />
+            <video 
+            src={getVideoUrl(video)}
+            className={`cursor-pointer media-video-player ${video.aspectRatio === '16:9' ? 'video-16-9' : 'video-9-16'}`}
+            autoPlay 
+            loop 
+            muted={isMuted}
+            playsInline
+            onClick={() => setIsMuted(!isMuted)} 
+            />
 
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>

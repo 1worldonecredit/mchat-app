@@ -205,3 +205,29 @@
     max-width: 65% !important;
   }
 }
+
+/* =========================================
+   ระบบจัดการสัดส่วนวิดีโอ (หน้าฟีด)
+   ========================================= */
+
+/* โหมดมือถือและแท็บเล็ต: แสดงเต็มจอแบบเดิม (Crop) */
+.media-video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* โหมดคอมพิวเตอร์ (หน้าจอกว้างตั้งแต่ 1024px ขึ้นไป) */
+@media (min-width: 1024px) {
+  /* วิดีโอ 16:9: แสดงแนวนอนแบบ YouTube (แถบดำบน-ล่าง) */
+  .media-video-player.video-16-9 {
+    object-fit: contain !important;
+    background-color: #000;
+  }
+  
+  /* วิดีโอ 9:16: แสดงแนวตั้งแบบ TikTok (แถบดำซ้าย-ขวา) */
+  .media-video-player.video-9-16 {
+    object-fit: contain !important;
+    background-color: #000;
+  }
+}
