@@ -7,6 +7,9 @@ import {
 import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
+const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; // โดเมน Cloudflare
+
 export default function Media({ setCurrentScreen, onMenuChange }) {
   const [showCart, setShowCart] = useState(false);
   const [province, setProvince] = useState("กำลังค้นหา...");
@@ -15,6 +18,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   const [fullScreenId, setFullScreenId] = useState(null);
   const [videoQuality, setVideoQuality] = useState('med'); 
   const [myAvatar, setMyAvatar] = useState(null);
+  
+  // 🌟 เปลี่ยนจากการ Fix ค่า เป็น State ว่างๆ รอรับจาก API
+  const [allVideos, setAllVideos] = useState([]);
 
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
@@ -35,52 +41,55 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
         })
         .catch(err => console.error("โหลดรูปโปรไฟล์ล้มเหลว:", err));
     }
+    
+    // 🌟 เรียกใช้ฟังก์ชันดึงวิดีโอเมื่อเปิดหน้านี้
+    loadFeed();
   }, []);
 
-  // เพิ่มข้อมูลจำลองสำหรับลายน้ำ (watermarkUrl, watermarkPos)
-  const [allVideos] = useState([
-    {
-      id: 1,
-      channelName: 'CEO_9Plus',
-      tier: 'Platinum ($100)',
-      caption: 'วิสัยทัศน์องค์กรปีนี้ ก้าวสู่ระดับโลก 🚀 #9Plus',
-      sound: 'Original Sound - CEO_9Plus',
-      likes: '45.2K',
-      comments: '1,204',
-      shares: '8,500',
-      avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-      url_low: 'https://www.w3schools.com/html/mov_bbb.mp4', 
-      url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      targetProvince: 'All',
-      watermarkUrl: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-      watermarkPos: 'top-left'
-    },
-    {
-      id: 2,
-      channelName: 'Marketing_Pro',
-      tier: 'Gold ($50)',
-      caption: 'เทคนิคการหาลูกค้าผ่านระบบอัจฉริยะ 💡 #MarketingTips',
-      sound: 'Trending Music 01',
-      likes: '12K',
-      comments: '450',
-      shares: '600',
-      avatar: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-      url_low: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      url_med: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      url_high: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      targetProvince: 'กรุงเทพมหานคร',
-      watermarkUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-      watermarkPos: 'top-right'
+  // 🌟 ฟังก์ชันดึงข้อมูลจาก Database และแปลงให้เข้ากับ UI เดิม
+  const loadFeed = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/videos/feed`);
+      const data = await res.json();
+      if (data.success) {
+        const formattedVideos = data.videos.map(v => ({
+          id: v.id,
+          channelName: v.channel_name || 'M-Chat User',
+          tier: 'Standard', 
+          caption: v.title || v.description || 'ไม่มีคำอธิบาย',
+          sound: v.sound_name || 'Original Sound',
+          likes: v.views_count || '0', 
+          comments: '0',
+          shares: '0',
+          avatar: v.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+          url_low: v.url_low,
+          url_med: v.url_med,
+          url_high: v.url_high,
+          cf_video_id: v.cf_video_id, // รหัส Cloudflare
+          targetProvince: 'All', 
+          // จัดการ URL ลายน้ำ (ถ้ารูปมาจาก R2 จะเป็น http นำหน้าอยู่แล้ว)
+          watermarkUrl: v.watermark_url ? (v.watermark_url.startsWith('http') ? v.watermark_url : `${API_URL}${v.watermark_url}`) : null,
+          watermarkPos: v.watermark_position || 'bottom-right'
+        }));
+        setAllVideos(formattedVideos);
+      }
+    } catch (error) {
+      console.error("Error loading feed:", error);
     }
-  ]);
+  };
 
+  // 🌟 ฟังก์ชันจัดการลิงก์วิดีโอ (ดึง Cloudflare HLS เป็นหลัก)
   const getVideoUrl = (video) => {
-    switch(videoQuality) {
-      case 'low': return video.url_low;
-      case 'high': return video.url_high;
-      default: return video.url_med;
+    // ถ้ามี Cloudflare ID ให้ดึงสตรีม m3u8 มาเล่น
+    if (video.cf_video_id) {
+      return `${CF_DOMAIN}/${video.cf_video_id}/manifest/video.m3u8`;
     }
+    
+    // สำรอง: ดึงจากไฟล์เก่าในเซิร์ฟเวอร์
+    let url = video.url_med || video.url_high || video.url_low;
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    return `${API_URL}${url}`;
   };
 
   const toggleFollow = (channelName) => {
@@ -106,13 +115,12 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     });
   }, [allVideos, province, activeTab, followedChannels]);
 
-  // ฟังก์ชันจัดตำแหน่งลายน้ำ
   const getWatermarkPositionClass = (pos) => {
     switch (pos) {
       case 'top-left': return 'top-20 left-4';
-      case 'top-right': return 'top-20 right-16'; // หลบปุ่มย่อขยายจอ
+      case 'top-right': return 'top-20 right-16'; 
       case 'bottom-left': return 'bottom-40 left-4';
-      case 'bottom-right': return 'bottom-40 right-16'; // หลบไอคอนแชร์
+      case 'bottom-right': return 'bottom-40 right-16'; 
       default: return 'bottom-40 right-16';
     }
   };
@@ -178,7 +186,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                 playsInline
               />
 
-              {/* ลายน้ำโลโก้ช่อง */}
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
                   <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
@@ -279,7 +286,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           )) : (
             <div className="flex items-center justify-center h-full text-[var(--icon-inactive)] flex-col gap-2">
               <Tv size={48} className="opacity-20" />
-              <p>ยังไม่มีคอนเทนต์ที่คุณติดตาม</p>
+              <p>ยังไม่มีวิดีโอในขณะนี้</p>
             </div>
           )}
         </div>
