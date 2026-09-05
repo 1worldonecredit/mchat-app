@@ -177,14 +177,15 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             <div key={video.id} className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden ${fullScreenId === video.id ? 'fixed inset-0 z-[100]' : ''}`}>
               
-              <video 
-                src={getVideoUrl(video)}
-                className="h-full w-full object-cover"
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-              />
+             <video 
+    src={getVideoUrl(video)}
+    className="h-full w-full object-cover cursor-pointer"
+    autoPlay 
+    loop 
+    muted={isMuted}
+    playsInline
+    onClick={() => setIsMuted(!isMuted)} 
+/>
 
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
