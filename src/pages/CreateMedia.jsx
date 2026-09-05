@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Image as ImageIcon, Scissors, Type, Smile, Frame, Plus, Inbox, 
   Search, Play, Tv, Loader2, Clock, CheckCircle2, Crown, Star, Edit2, Upload, MonitorPlay,
-  Heart, MessageCircle, Users, UserPlus, User
+  Heart, MessageCircle, Users, UserPlus, User, Check, Eye, Link as LinkIcon, Trash2
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
@@ -16,6 +16,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   // ==========================================
   const [userData, setUserData] = useState(null); 
   const [channelData, setChannelData] = useState(null); 
+  const [channelVideos, setChannelVideos] = useState([]); // [เพิ่มใหม่] State เก็บวิดีโอทั้งหมดของช่อง
   const [templates, setTemplates] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,8 +41,15 @@ export default function CreateMedia({ setCurrentScreen }) {
   ];
   const tabs = ['For You', 'Viral Song', 'Trendy', 'AI', 'Monthly Recap'];
 
+  // [เพิ่มใหม่] ฟังก์ชันจัดการ URL ของรูปภาพ/วิดีโอให้แสดงผลถูกต้อง
+  const getMediaUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('http') || url.startsWith('data:image')) return url;
+    return `${API_URL}${url}`;
+  };
+
   // ==========================================
-  // 2. โหลดข้อมูลเมื่อเปิดหน้า (User Profile & Channel)
+  // 2. โหลดข้อมูลเมื่อเปิดหน้า (User Profile, Channel, และ Videos)
   // ==========================================
   useEffect(() => {
     const fetchRealData = async () => {
@@ -53,10 +61,11 @@ export default function CreateMedia({ setCurrentScreen }) {
           return;
         }
 
-        const [userRes, channelRes] = await Promise.all([
+        // [แก้ไขเพิ่มเติม] ดึงข้อมูลวิดีโอของช่องมาพร้อมกันเลย
+        const [userRes, channelRes, videosRes] = await Promise.all([
           fetchUserProfile(userId).catch(() => null),
-          // ใช้ API_URL ตามโครงสร้างที่ถูกต้อง
-          fetch(`${API_URL}/api/channels?userId=${userId}`).then(res => res.json()).catch(() => null)
+          fetch(`${API_URL}/api/channels?userId=${userId}`).then(res => res.json()).catch(() => null),
+          fetch(`${API_URL}/api/videos/channel?userId=${userId}`).then(res => res.json()).catch(() => null)
         ]);
 
         if (userRes && userRes.success && userRes.profile) {
@@ -65,10 +74,16 @@ export default function CreateMedia({ setCurrentScreen }) {
 
         if (channelRes && channelRes.success && channelRes.channel) {
           setChannelData(channelRes.channel);
+          // ดึง Logo จาก DB มาเซ็ต เพื่อไม่ให้หายตอนรีเฟรช
           if (channelRes.channel.logo_url) setChannelLogo(channelRes.channel.logo_url);
           if (channelRes.channel.watermark_position) setWatermarkPos(channelRes.channel.watermark_position);
         } else {
           setChannelData(null); 
+        }
+
+        // [เพิ่มใหม่] เซ็ตข้อมูลวิดีโอลง State
+        if (videosRes && videosRes.success) {
+          setChannelVideos(videosRes.videos);
         }
 
       } catch (error) {
@@ -183,9 +198,7 @@ export default function CreateMedia({ setCurrentScreen }) {
     }
   };
 
-  // ==========================================
-  // 5. โครงสร้างหน้าเว็บ (UI)
-  // ==========================================
+
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)] relative" style={{ fontFamily: 'var(--font-family)' }}>
       
@@ -267,8 +280,9 @@ export default function CreateMedia({ setCurrentScreen }) {
                 
                 <div className="relative group cursor-pointer" onClick={() => logoInputRef.current.click()}>
                   <div className="w-16 h-16 rounded-xl bg-[var(--app-bg)] border-2 border-dashed border-[var(--icon-active)] flex items-center justify-center overflow-hidden">
+                    {/* [แก้ไข] ดึงโลโก้แสดงผลได้อย่างถูกต้อง */}
                     {channelLogo ? (
-                      <img src={channelLogo} alt="Logo" className="w-full h-full object-cover" />
+                      <img src={getMediaUrl(channelLogo)} alt="Logo" className="w-full h-full object-cover" />
                     ) : (
                       <ImageIcon size={24} className="text-[var(--icon-inactive)]" />
                     )}
@@ -348,9 +362,9 @@ export default function CreateMedia({ setCurrentScreen }) {
             <button 
              onClick={() => setCurrentScreen('camera_studio')}
              className="flex-1 bg-white text-black rounded-xl py-3 flex flex-col items-center justify-center font-bold hover:scale-[1.02] transition shadow-lg"
-                >
-             <Plus size={24} className="mb-0.5" strokeWidth={3} />
-             New video
+            >
+              <Plus size={24} className="mb-0.5" strokeWidth={3} />
+              New video
             </button>
           ) : (
             <button 
@@ -368,7 +382,66 @@ export default function CreateMedia({ setCurrentScreen }) {
           </button>
         </div>
 
-        {/* Templates */}
+        {/* ========================================== */}
+        {/* [เพิ่มใหม่] ส่วนแสดงวิดีโอผลงานของฉัน (Card 2 คอลัมน์) */}
+        {/* ========================================== */}
+        {channelData && channelData.id && (
+          <>
+            <div className="flex justify-between items-center px-4 mt-6 mb-3">
+              <h2 className="text-lg font-bold">ผลงานวิดีโอของฉัน</h2>
+            </div>
+            
+            <div className="px-4 pb-4">
+              {channelVideos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {channelVideos.map(video => (
+                    <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
+                      {/* Video / Cover Thumbnail */}
+                      <div className={`w-full bg-black relative ${video.aspect_ratio === '16:9' ? 'aspect-video' : 'aspect-[3/4]'}`}>
+                        {video.cover_url ? (
+                          <img src={getMediaUrl(video.cover_url)} alt="cover" className="w-full h-full object-cover" />
+                        ) : (
+                          <video src={getMediaUrl(video.url_high)} className="w-full h-full object-contain" />
+                        )}
+                        {video.status === 'pending' && <span className="absolute top-2 left-2 bg-orange-500/80 text-white text-[9px] px-2 py-0.5 rounded">รอตรวจ</span>}
+                        {video.status === 'approved' && <span className="absolute top-2 left-2 bg-green-500/80 text-white text-[9px] px-2 py-0.5 rounded">อนุมัติแล้ว</span>}
+                      </div>
+                      
+                      {/* Video Details & Stats */}
+                      <div className="p-3 flex flex-col flex-1">
+                        <h3 className="text-xs font-bold truncate mb-1 text-[var(--text-heading)]">{video.title || 'ไม่มีชื่อคลิป'}</h3>
+                        <p className="text-[10px] text-[var(--icon-inactive)] line-clamp-2 mb-2 flex-1">{video.description || 'ไม่มีรายละเอียด'}</p>
+                        
+                        <div className="flex justify-between items-center text-[9px] text-[var(--icon-inactive)] mb-3">
+                          <div className="flex items-center gap-0.5"><Eye size={12}/>{video.views_count || 0}</div>
+                          <div className="flex items-center gap-0.5"><Heart size={12}/>{video.likes_count || 0}</div>
+                          <div className="flex items-center gap-0.5"><MessageCircle size={12}/>{video.comments_count || 0}</div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-auto">
+                          <button className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-orange-400 text-orange-400 rounded-lg text-[10px] font-bold hover:bg-orange-400/10 transition">
+                            <Edit2 size={10} /> แก้ไข
+                          </button>
+                          <button className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-red-500 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-500/10 transition">
+                            <Trash2 size={10} /> ลบ
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-[var(--icon-inactive)] bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
+                  <Tv size={32} className="mb-2 opacity-30" />
+                  <p className="text-xs">คุณยังไม่มีวิดีโอในช่อง</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Templates (รักษาโค้ดเดิมของคุณไว้ 100%) */}
         <div className="flex justify-between items-center px-4 mt-6 mb-3">
           <h2 className="text-lg font-bold">Templates</h2>
           <Search size={22} className="text-[var(--icon-inactive)] hover:text-[var(--text-heading)] transition cursor-pointer" />
