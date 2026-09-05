@@ -8,6 +8,7 @@ import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
+const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; // 🌟 โดเมน Cloudflare
 
 const THAI_MONTHS = [
   { value: '01', label: 'มกราคม' }, { value: '02', label: 'กุมภาพันธ์' }, { value: '03', label: 'มีนาคม' },
@@ -32,6 +33,9 @@ export default function CreateMedia({ setCurrentScreen }) {
   const [channelLogo, setChannelLogo] = useState(null);
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
+  
+  const [isLogoChanged, setIsLogoChanged] = useState(false);
+  const [isSavingLogo, setIsSavingLogo] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,10 +55,19 @@ export default function CreateMedia({ setCurrentScreen }) {
   ];
   const tabs = ['For You', 'Viral Song', 'Trendy', 'AI', 'Monthly Recap'];
 
+  // ==========================================
+  // ฟังก์ชันตัวช่วยดึง URL
+  // ==========================================
   const getMediaUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('blob:') || url.startsWith('http') || url.startsWith('data:image')) return url;
     return `${API_URL}${url}`;
+  };
+
+  // 🌟 ฟังก์ชันสร้างลิงก์เล่นวิดีโอจาก Cloudflare
+  const getCloudflareVideoUrl = (cfId, localUrl) => {
+    if (cfId) return `${CF_DOMAIN}/${cfId}/manifest/video.m3u8`;
+    return getMediaUrl(localUrl); 
   };
 
   const loadChannelVideos = async (userId) => {
@@ -140,43 +153,43 @@ export default function CreateMedia({ setCurrentScreen }) {
   };
 
   // ==========================================
-  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้อัตโนมัติ 100%
+  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้
   // ==========================================
-  const handleLogoUpload = async (e) => {
+  const handleLogoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    
-    reader.onloadend = async () => {
-      const base64String = reader.result;
-      setChannelLogo(base64String); // โชว์รูปบนหน้าจอทันที
-
-      const userId = localStorage.getItem('currentUserId');
-      if (userId) {
-        try {
-          await fetch(`${API_URL}/api/channels/logo`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: userId,
-              logoBase64: base64String,
-              watermarkPosition: watermarkPos
-            })
-          });
-          alert("อัปโหลดและบันทึกโลโก้สำเร็จ!");
-        } catch (err) {
-          console.error("อัปโหลดโลโก้ล้มเหลว", err);
-          alert("ไม่สามารถบันทึกโลโก้ได้ (ไฟล์อาจใหญ่เกินไป)");
-        }
-      }
+    reader.onloadend = () => {
+      setChannelLogo(reader.result); 
+      setIsLogoChanged(true); 
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveLogo = async () => {
+    setIsSavingLogo(true);
+    const userId = localStorage.getItem('currentUserId');
+    if (userId && channelData) {
+      try {
+        await fetch(`${API_URL}/api/channels/logo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, logoBase64: channelLogo, watermarkPosition: watermarkPos })
+        });
+        setIsLogoChanged(false); 
+        alert("บันทึกโลโก้เรียบร้อยแล้ว");
+      } catch (err) {
+        console.error("อัปโหลดโลโก้ล้มเหลว", err);
+      } finally {
+        setIsSavingLogo(false);
+      }
+    }
   };
 
   const handleWatermarkPosChange = async (newPos) => {
     setWatermarkPos(newPos);
     const userId = localStorage.getItem('currentUserId');
-    if (userId && channelData && channelLogo) {
+    if (userId && channelData && channelLogo && !isLogoChanged) {
       try {
         await fetch(`${API_URL}/api/channels/logo`, {
           method: 'POST',
@@ -188,7 +201,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   };
 
   // ==========================================
-  // 5. ฟังก์ชันแก้ไข Video
+  // 5. ฟังก์ชันแก้ไข Video (เวลาและสถานะ)
   // ==========================================
   const openVideoEditModal = (video) => {
     setEditingVideo(video);
@@ -290,7 +303,7 @@ export default function CreateMedia({ setCurrentScreen }) {
                     {channelLogo ? <img src={getMediaUrl(channelLogo)} alt="Logo" className="w-full h-full object-cover" /> : <ImageIcon size={24} className="text-[var(--icon-inactive)]" />}
                   </div>
                   <div className="absolute -bottom-2 -right-2 bg-[var(--icon-active)] p-1.5 rounded-full text-white shadow-md"><Upload size={12} strokeWidth={3} /></div>
-                  <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoSelect} />
                 </div>
                 
                 <div className="flex flex-col">
@@ -298,6 +311,13 @@ export default function CreateMedia({ setCurrentScreen }) {
                   <span className="text-[10px] text-[var(--icon-active)] bg-[var(--icon-active)]/10 px-2 py-0.5 rounded-full w-fit mt-1 border border-[var(--icon-active)]/30">
                     {channelData.category === 'business' ? 'ธุรกิจและการลงทุน' : channelData.category === 'education' ? 'การศึกษา / ให้ความรู้' : channelData.category === 'lifestyle' ? 'ไลฟ์สไตล์ / บันเทิง' : channelData.category === 'news' ? 'ข่าวสาร' : channelData.category}
                   </span>
+                  
+                  {/* ปุ่ม Icon บันทึกโลโก้ จะแสดงเมื่อมีการเลือกรูปใหม่ */}
+                  {isLogoChanged && (
+                    <button onClick={handleSaveLogo} disabled={isSavingLogo} className="mt-2 bg-green-500 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 w-fit shadow-md hover:bg-green-600 transition">
+                      {isSavingLogo ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} บันทึกโลโก้
+                    </button>
+                  )}
                 </div>
               </div>
               <button onClick={openEditModal} className="p-2 text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition bg-[var(--app-bg)] rounded-lg shadow-sm border border-[var(--border-color)]"><Edit2 size={16} /></button>
@@ -339,7 +359,7 @@ export default function CreateMedia({ setCurrentScreen }) {
           </button>
         </div>
 
-        {/* --- ส่วนที่ 4: แสดงวิดีโอ (แก้ไขโค้ด Video Player ให้เล่นได้จริง 100%) --- */}
+        {/* --- ส่วนที่ 4: แสดงวิดีโอ (🌟 เล่นผ่าน Cloudflare HLS) --- */}
         {channelData && channelData.id && (
           <>
             <div className="flex justify-between items-center px-4 mt-6 mb-3">
@@ -352,20 +372,17 @@ export default function CreateMedia({ setCurrentScreen }) {
                   {channelVideos.map(video => (
                     <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
                       
-                      {/* Video Player ที่ปรับแก้ Source และ Tag ให้เล่นได้ชัวร์ */}
+                      {/* Video Player ที่ดึง URL .m3u8 จากฟังก์ชัน */}
                       <div className={`w-full bg-black relative ${video.aspect_ratio === '16:9' ? 'aspect-video' : 'aspect-[3/4]'}`}>
                         <video 
+                          src={getCloudflareVideoUrl(video.cf_video_id, video.url_high || video.video_url)} 
+                          poster={video.cover_url ? getMediaUrl(video.cover_url) : undefined}
                           controls 
-                          preload="auto" 
+                          preload="metadata" 
                           playsInline 
                           controlsList="nodownload"
-                          poster={video.cover_url ? getMediaUrl(video.cover_url) : undefined}
                           className="w-full h-full object-contain relative z-10" 
-                        >
-                          <source src={getMediaUrl(video.url_high || video.video_url)} type="video/mp4" />
-                          เบราว์เซอร์ของคุณไม่รองรับวิดีโอนี้
-                        </video>
-                        
+                        />
                         {/* ป้ายสถานะ */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
                           {video.status === 'pending' && <span className="bg-orange-500/90 text-white text-[9px] px-2 py-0.5 rounded shadow">รอตรวจ</span>}
@@ -539,6 +556,3 @@ export default function CreateMedia({ setCurrentScreen }) {
     </div>
   );
 }
-  // ==========================================
-  // 6. CreateMedia  บันทึกโลโก้ แสดง video  end
-  // ==========================================
