@@ -174,122 +174,118 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory lg:snap-none media-scroll-area lg:bg-[var(--app-bg)] lg:py-8 lg:pb-32">
+        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area desktop-feed-bg">
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             
             <div 
               key={video.id} 
-              className={`relative w-full snap-start snap-always mx-auto transition-all flex flex-col justify-center
-                ${video.aspectRatio === '16:9' 
-                  ? 'h-full lg:h-auto lg:max-w-5xl lg:mb-16' 
-                  : 'h-full lg:h-[85vh] lg:max-w-[420px] lg:mb-12 lg:rounded-2xl lg:overflow-hidden lg:border lg:border-[var(--border-color)] lg:shadow-2xl'
-                }
-                ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full !h-full !rounded-none !border-none !bg-black' : 'bg-[var(--card-bg)] lg:bg-transparent'}
-              `}
+              className={`relative h-full w-full snap-start snap-always bg-black overflow-hidden desktop-item-container ${video.aspectRatio === '16:9' ? 'layout-16-9' : 'layout-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
             >
               
-              {/* 🌟 1. กรอบเล่นวิดีโอ (บนคอม 16:9 จะขยายกว้างและโค้งมนแบบ YouTube) */}
-              <div className={`relative w-full ${video.aspectRatio === '16:9' ? 'h-full lg:h-auto lg:aspect-video lg:rounded-2xl lg:overflow-hidden lg:bg-black lg:shadow-lg' : 'h-full'}`}>
-                <video 
-                  src={getVideoUrl(video)}
-                  className={`h-full w-full cursor-pointer ${video.aspectRatio === '16:9' ? 'object-cover lg:object-contain' : 'object-cover'}`}
-                  autoPlay 
-                  loop 
-                  muted={isMuted}
-                  playsInline
-                  onClick={() => setIsMuted(!isMuted)} 
-                />
+              <video 
+                src={getVideoUrl(video)}
+                className={`h-full w-full cursor-pointer desktop-video-player ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
+                autoPlay 
+                loop 
+                muted={isMuted}
+                playsInline
+                onClick={() => setIsMuted(!isMuted)} 
+              />
 
-                {video.watermarkUrl && (
-                  <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
-                    <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
-                  </div>
-                )}
+              {/* ลายน้ำโลโก้ช่อง */}
+              {video.watermarkUrl && (
+                <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
+                  <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
+                </div>
+              )}
 
+              <button 
+                onClick={() => toggleFullScreen(video.id)}
+                className="absolute top-20 right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
+              >
+                {fullScreenId === video.id ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
+
+              <div className="absolute bottom-0 left-0 w-full h-[60%] bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/60 to-transparent z-0 pointer-events-none"></div>
+
+              <div className="absolute bottom-4 left-3 z-10 flex flex-col items-start max-w-[70%]">
                 <button 
-                  onClick={() => toggleFullScreen(video.id)}
-                  className="absolute top-20 right-4 lg:top-4 lg:right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
+                  onClick={() => setShowCart(true)}
+                  className="flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] px-3 py-1.5 rounded-lg mb-3 hover:scale-105 transition shadow-lg"
                 >
-                  {fullScreenId === video.id ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                  <ShoppingCart size={16} />
+                  <span className="text-xs font-bold tracking-wider">ตะกร้าสินค้า 9Plus</span>
                 </button>
 
-                {/* Gradient บังเงา (ซ่อนทิ้งในโหมด 16:9 บนคอม เพราะไม่ต้องลอยปุ่มทับแล้ว) */}
-                <div className={`absolute bottom-0 left-0 w-full h-[60%] bg-gradient-to-t from-black via-black/60 to-transparent z-0 pointer-events-none ${video.aspectRatio === '16:9' ? 'lg:hidden' : ''}`}></div>
-              </div>
-
-              {/* 🌟 2. ข้อมูลและปุ่มกดต่างๆ (โหมด 16:9 จะย้ายมาอยู่ใต้คลิป) */}
-              <div className={`absolute bottom-0 left-0 w-full h-full pointer-events-none ${video.aspectRatio === '16:9' ? 'lg:static lg:h-auto lg:mt-5 lg:flex lg:flex-row lg:justify-between lg:items-start' : ''}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-bold text-[15px] text-[var(--text-heading)] drop-shadow-md truncate">@{video.channelName}</h3>
+                  <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                    {video.tier}
+                  </span>
+                  {!followedChannels.includes(video.channelName) && (
+                    <button 
+                      onClick={() => toggleFollow(video.channelName)}
+                      className="ml-2 bg-[var(--icon-active)] text-[var(--app-bg)] px-2 py-0.5 rounded text-[10px] font-bold hover:scale-105 transition shadow-md"
+                    >
+                      ติดตาม
+                    </button>
+                  )}
+                </div>
                 
-                {/* ข้อมูลด้านซ้าย (Profile, Caption) */}
-                <div className={`absolute bottom-4 left-3 z-10 flex flex-col items-start max-w-[70%] pointer-events-auto ${video.aspectRatio === '16:9' ? 'lg:static lg:max-w-full lg:flex-1' : ''}`}>
-                  <button 
-                    onClick={() => setShowCart(true)}
-                    className={`flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] px-3 py-1.5 rounded-lg mb-3 hover:scale-105 transition shadow-lg ${video.aspectRatio === '16:9' ? 'lg:mb-4 lg:px-4 lg:py-2' : ''}`}
-                  >
-                    <ShoppingCart size={16} />
-                    <span className="text-xs font-bold tracking-wider">ตะกร้าสินค้า 9Plus</span>
-                  </button>
-
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className={`font-bold text-[15px] text-white drop-shadow-md truncate ${video.aspectRatio === '16:9' ? 'lg:text-xl lg:text-[var(--text-heading)] lg:drop-shadow-none' : ''}`}>@{video.channelName}</h3>
-                    <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
-                      {video.tier}
-                    </span>
-                    {!followedChannels.includes(video.channelName) && (
-                      <button 
-                        onClick={() => toggleFollow(video.channelName)}
-                        className="ml-2 bg-[var(--icon-active)] text-[var(--app-bg)] px-2 py-0.5 rounded text-[10px] font-bold hover:scale-105 transition shadow-md"
-                      >
-                        ติดตาม
-                      </button>
-                    )}
-                  </div>
-                  
-                  <p className={`text-[13px] mb-3 line-clamp-2 text-white drop-shadow-md opacity-90 w-full pr-2 ${video.aspectRatio === '16:9' ? 'lg:text-sm lg:text-[var(--icon-inactive)] lg:drop-shadow-none lg:mt-1 lg:line-clamp-none' : ''}`}>{video.caption}</p>
-                  
-                  <div className={`flex items-center gap-2 text-xs font-medium w-full ${video.aspectRatio === '16:9' ? 'lg:hidden' : ''}`}>
-                    <Music size={14} className="text-[var(--icon-active)] animate-pulse shrink-0" />
-                    <div className="flex-1 overflow-hidden whitespace-nowrap mask-image-fade">
-                      <p className="animate-text-slide text-[var(--icon-inactive)]">{video.sound}</p>
-                    </div>
+                <p className="text-[13px] mb-3 line-clamp-2 text-[var(--text-heading)] drop-shadow-md opacity-90 w-full pr-2">{video.caption}</p>
+                
+                <div className="flex items-center gap-2 text-xs font-medium w-full">
+                  <Music size={14} className="text-[var(--icon-active)] animate-pulse shrink-0" />
+                  <div className="flex-1 overflow-hidden whitespace-nowrap mask-image-fade">
+                    <p className="animate-text-slide text-[var(--icon-inactive)]">{video.sound}</p>
                   </div>
                 </div>
+              </div>
 
-                {/* ปุ่มด้านขวา (Likes, Comments) - บน 16:9 จะเปลี่ยนเป็นแถวแนวนอน */}
-                <div className={`absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px] pointer-events-auto ${video.aspectRatio === '16:9' ? 'lg:static lg:flex-row lg:w-auto lg:h-fit lg:bg-[var(--card-bg)] lg:rounded-full lg:px-6 lg:py-2.5 lg:border lg:border-[var(--border-color)] lg:shadow-sm lg:gap-6 lg:mt-2' : ''}`}>
-                  <div 
-                    className={`relative mb-2 cursor-pointer hover:scale-105 transition ${video.aspectRatio === '16:9' ? 'lg:hidden' : ''}`}
-                    onClick={() => setCurrentScreen('create_media')} 
-                  >
-                    <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
-                      {myAvatar ? (
-                        <img src={myAvatar} alt="My Profile" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                      )}
-                    </div>
+              <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px]">
+                <div 
+                  className="relative mb-2 cursor-pointer hover:scale-105 transition"
+                  onClick={() => setCurrentScreen('create_media')} 
+                >
+                  <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
+                    {myAvatar ? (
+                      <img src={myAvatar} alt="My Profile" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    )}
                   </div>
+                  {!followedChannels.includes(video.channelName) && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        toggleFollow(video.channelName);
+                      }}
+                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95 shadow-md"
+                    >
+                      <Plus size={14} strokeWidth={3} />
+                    </button>
+                  )}
+                </div>
 
-                  <div className={`flex flex-col items-center gap-0.5 cursor-pointer ${video.aspectRatio === '16:9' ? 'lg:flex-row lg:gap-2' : ''}`}>
-                    <div className="active:scale-90 transition p-1">
-                      <Heart size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
-                    </div>
-                    <span className={`text-[10px] font-semibold text-[var(--icon-inactive)] ${video.aspectRatio === '16:9' ? 'lg:text-[13px] lg:font-bold' : ''}`}>{video.likes}</span>
+                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                  <div className="active:scale-90 transition p-1">
+                    <Heart size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
                   </div>
+                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.likes}</span>
+                </div>
 
-                  <div className={`flex flex-col items-center gap-0.5 cursor-pointer ${video.aspectRatio === '16:9' ? 'lg:flex-row lg:gap-2' : ''}`}>
-                    <div className="active:scale-90 transition p-1">
-                      <MessageCircle size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
-                    </div>
-                    <span className={`text-[10px] font-semibold text-[var(--icon-inactive)] ${video.aspectRatio === '16:9' ? 'lg:text-[13px] lg:font-bold' : ''}`}>{video.comments}</span>
+                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                  <div className="active:scale-90 transition p-1">
+                    <MessageCircle size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
                   </div>
+                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.comments}</span>
+                </div>
 
-                  <div className={`flex flex-col items-center gap-0.5 cursor-pointer ${video.aspectRatio === '16:9' ? 'lg:flex-row lg:gap-2' : ''}`}>
-                    <div className="active:scale-90 transition p-1">
-                      <Share2 size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
-                    </div>
-                    <span className={`text-[10px] font-semibold text-[var(--icon-inactive)] ${video.aspectRatio === '16:9' ? 'lg:text-[13px] lg:font-bold' : ''}`}>{video.shares}</span>
+                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                  <div className="active:scale-90 transition p-1">
+                    <Share2 size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
                   </div>
+                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.shares}</span>
                 </div>
               </div>
 
