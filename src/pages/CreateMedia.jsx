@@ -235,8 +235,7 @@ export default function CreateMedia({ setCurrentScreen }) {
   // 6. โครงสร้างหน้าเว็บ (UI)
   // ==========================================
 
-
-  return (
+return (
     <div className="flex flex-col h-[100dvh] w-full bg-[var(--app-bg)] text-[var(--text-heading)] relative" style={{ fontFamily: 'var(--font-family)' }}>
       
       {/* Header */}
@@ -354,7 +353,7 @@ export default function CreateMedia({ setCurrentScreen }) {
           </button>
         </div>
 
-        {/* --- ส่วนที่ 4: แสดงวิดีโอ (เล่นได้จริง & แสดงสถานะส่วนตัว/สาธารณะ) --- */}
+        {/* --- ส่วนที่ 4: แสดงวิดีโอ (เล่นได้จริง & ต้องกด Play ก่อนเท่านั้น) --- */}
         {channelData && channelData.id && (
           <>
             <div className="flex justify-between items-center px-4 mt-6 mb-3">
@@ -367,15 +366,19 @@ export default function CreateMedia({ setCurrentScreen }) {
                   {channelVideos.map(video => (
                     <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
                       
-                      {/* Video Player ที่เล่นได้จริง */}
+                      {/* Video Player ที่ต้องกด Play */}
                       <div className={`w-full bg-black relative ${video.aspect_ratio === '16:9' ? 'aspect-video' : 'aspect-[3/4]'}`}>
                         <video 
                           src={getMediaUrl(video.url_high || video.video_url)} 
                           poster={video.cover_url ? getMediaUrl(video.cover_url) : undefined}
-                          controls preload="metadata" playsInline controlsList="nodownload"
-                          className="w-full h-full object-contain" 
+                          controls 
+                          preload="metadata" // โหลดแค่ข้อมูลเริ่มต้น ไม่เปิดเล่นอัตโนมัติ
+                          playsInline 
+                          controlsList="nodownload"
+                          className="w-full h-full object-contain relative z-10" 
                         />
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {/* ป้ายสถานะ */}
+                        <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
                           {video.status === 'pending' && <span className="bg-orange-500/90 text-white text-[9px] px-2 py-0.5 rounded shadow">รอตรวจ</span>}
                           {video.visibility === 'private' ? (
                             <span className="bg-gray-700/90 text-white text-[9px] px-2 py-0.5 rounded flex items-center gap-1 shadow"><Lock size={8}/> ส่วนตัว</span>
