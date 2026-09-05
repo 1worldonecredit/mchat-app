@@ -30,6 +30,9 @@ export default function CreateMedia({ setCurrentScreen }) {
   const [templates, setTemplates] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
+  const [filterMonth, setFilterMonth] = useState('all');
+const [sortBy, setSortBy] = useState('latest');
+
   const [channelLogo, setChannelLogo] = useState(null);
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
@@ -238,6 +241,25 @@ export default function CreateMedia({ setCurrentScreen }) {
     }
   };
 
+  const handleDeleteVideo = async (videoId) => {
+    if (!window.confirm('คุณต้องการลบวิดีโอนี้ใช่หรือไม่?')) return;
+    try {
+        const userId = localStorage.getItem('currentUserId');
+        const res = await fetch(`${API_URL}/api/videos/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoId, userId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // เอาวิดีโอที่ลบแล้วออกจากหน้าจอทันทีโดยไม่ต้องโหลดเว็บใหม่
+            setChannelVideos(prev => prev.filter(v => v.id !== videoId));
+        }
+    } catch(err) {
+        console.error(err);
+    }
+};
+
   // ==========================================
   // 6. โครงสร้างหน้าเว็บ (UI)
   // ==========================================
@@ -359,17 +381,32 @@ export default function CreateMedia({ setCurrentScreen }) {
           </button>
         </div>
 
-        {/* --- ส่วนที่ 4: แสดงวิดีโอ (🌟 เล่นผ่าน Cloudflare HLS) --- */}
+        {/* --- ส่วนที่ 4: แสดงวิดีโอ (🌟 เล่นผ่าน Cloudflare HLS พร้อมระบบกรองและลบ) --- */}
         {channelData && channelData.id && (
           <>
             <div className="flex justify-between items-center px-4 mt-6 mb-3">
               <h2 className="text-lg font-bold">ผลงานวิดีโอของฉัน</h2>
             </div>
             
+            {/* แถบเครื่องมือ ตัวกรอง และ การจัดเรียง (เพิ่มใหม่) */}
+            <div className="flex gap-3 px-4 mb-3 mt-2">
+              <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="bg-[var(--card-bg)] text-xs text-[var(--text-heading)] p-2 rounded-lg border border-[var(--border-color)] outline-none flex-1">
+                <option value="all">ทุกเดือน</option>
+                {THAI_MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-[var(--card-bg)] text-xs text-[var(--text-heading)] p-2 rounded-lg border border-[var(--border-color)] outline-none flex-1">
+                <option value="latest">ใหม่ล่าสุด</option>
+                <option value="views">ยอดวิวสูงสุด</option>
+              </select>
+            </div>
+
             <div className="px-4 pb-4">
               {channelVideos.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {channelVideos.map(video => (
+                  {channelVideos
+                    .filter(v => filterMonth === 'all' || new Date(v.publish_date || v.created_at).getMonth() + 1 === parseInt(filterMonth))
+                    .sort((a, b) => sortBy === 'views' ? (b.views_count || 0) - (a.views_count || 0) : new Date(b.publish_date || b.created_at) - new Date(a.publish_date || a.created_at))
+                    .map(video => (
                     <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
                       
                       {/* Video Player ที่ดึง URL .m3u8 จากฟังก์ชัน */}
@@ -408,9 +445,12 @@ export default function CreateMedia({ setCurrentScreen }) {
                           <button onClick={() => openVideoEditModal(video)} className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-orange-400 text-orange-400 rounded-lg text-[10px] font-bold hover:bg-orange-400/10 transition">
                             <Edit2 size={10} /> แก้ไข
                           </button>
-                          <button className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-red-500 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-500/10 transition">
+                          
+                          {/* แก้ไขปุ่มลบให้เรียกใช้ฟังก์ชัน handleDeleteVideo */}
+                          <button onClick={() => handleDeleteVideo(video.id)} className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-red-500 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-500/10 transition">
                             <Trash2 size={10} /> ลบ
                           </button>
+                          
                         </div>
                       </div>
                     </div>
@@ -419,7 +459,7 @@ export default function CreateMedia({ setCurrentScreen }) {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-[var(--icon-inactive)] bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
                   <Tv size={32} className="mb-2 opacity-30" />
-                  <p className="text-xs">คุณยังไม่มีวิดีโอในช่อง</p>
+                  <p className="text-xs">ไม่มีรายการวิดีโอตามตัวกรองนี้</p>
                 </div>
               )}
             </div>
@@ -470,6 +510,17 @@ export default function CreateMedia({ setCurrentScreen }) {
                   <option value="">เลือกประเภทรายการ</option><option value="business">ธุรกิจและการลงทุน</option><option value="education">การศึกษา / ให้ความรู้</option><option value="lifestyle">ไลฟ์สไตล์ / บันเทิง</option><option value="news">ข่าวสาร / แจ้งเตือน</option>
                 </select>
               </div>
+
+                <div>
+             <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">รายละเอียด (Description)</label>
+            <textarea 
+                 value={editingVideo.description || ''} 
+             onChange={e => setEditingVideo({...editingVideo, description: e.target.value})} 
+             className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm min-h-[80px]" 
+             placeholder="พิมพ์รายละเอียดวิดีโอ..." 
+             />
+            </div>
+
               <div>
                 <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">รายละเอียด (Description)</label>
                 <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm min-h-[80px]" placeholder="คำอธิบายสั้นๆ เกี่ยวกับช่องของคุณ..." />
