@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
-const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; // โดเมน Cloudflare
+const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; 
 
 const THAI_MONTHS = [
   { value: '01', label: 'มกราคม' }, { value: '02', label: 'กุมภาพันธ์' }, { value: '03', label: 'มีนาคม' },
@@ -62,6 +62,21 @@ export default function CameraStudio({ setCurrentScreen }) {
     return `${diffDays} วันที่แล้ว`;
   };
 
+  // 🌟 ฟังก์ชันอัปโหลดรูปภาพครอบจักรวาล (ส่งไป Cloudflare R2)
+  const uploadImageToR2 = async (imageFile) => {
+    try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        const res = await fetch(`${API_URL}/api/upload/image`, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) return data.url; 
+        throw new Error(data.message);
+    } catch (error) {
+        console.error('R2 Upload Error:', error);
+        return null;
+    }
+  };
+
   const loadPendingVideos = async () => {
     setIsLoadingDrafts(true);
     try {
@@ -87,7 +102,6 @@ export default function CameraStudio({ setCurrentScreen }) {
     };
     startCamera();
     loadPendingVideos();
-
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, []);
 
@@ -113,6 +127,7 @@ export default function CameraStudio({ setCurrentScreen }) {
     setEditingVideo({
       isNew: true, id: null, videoFile: file, video_url: videoUrl,
       title: '', category: '', description: '', cover_url: '', outro_cover_url: '',
+      coverFile: null, outroFile: null, // 🌟 เพิ่ม State เก็บไฟล์รูป
       status: 'pending', aspect_ratio: '9:16', visibility: 'public', cf_video_id: null
     }); 
     e.target.value = null; 
@@ -126,7 +141,7 @@ export default function CameraStudio({ setCurrentScreen }) {
     setPubTime(d.toTimeString().slice(0, 5));
 
     setEditingVideo({
-      ...video, isNew: false, videoFile: null,
+      ...video, isNew: false, videoFile: null, coverFile: null, outroFile: null,
       video_url: video.cf_video_id ? getCloudflareVideoUrl(video.cf_video_id) : (video.url_high || video.video_url)
     });
   };
@@ -136,7 +151,7 @@ export default function CameraStudio({ setCurrentScreen }) {
     if (!file) return;
     if (file.size > 500 * 1024) return alert('❌ รูปปกขนาดใหญ่เกินไปครับ! (สูงสุดไม่เกิน 500KB)');
     const reader = new FileReader();
-    reader.onloadend = () => setEditingVideo(prev => ({ ...prev, cover_url: reader.result }));
+    reader.onloadend = () => setEditingVideo(prev => ({ ...prev, cover_url: reader.result, coverFile: file })); // 🌟 เก็บไฟล์ตัวจริง
     reader.readAsDataURL(file);
   };
 
@@ -145,7 +160,7 @@ export default function CameraStudio({ setCurrentScreen }) {
     if (!file) return;
     if (file.size > 500 * 1024) return alert('❌ รูปปกขนาดใหญ่เกินไปครับ! (สูงสุดไม่เกิน 500KB)');
     const reader = new FileReader();
-    reader.onloadend = () => setEditingVideo(prev => ({ ...prev, outro_cover_url: reader.result }));
+    reader.onloadend = () => setEditingVideo(prev => ({ ...prev, outro_cover_url: reader.result, outroFile: file })); // 🌟 เก็บไฟล์ตัวจริง
     reader.readAsDataURL(file);
   };
 
@@ -160,7 +175,22 @@ export default function CameraStudio({ setCurrentScreen }) {
     try {
       const userId = localStorage.getItem('currentUserId');
       let cfVideoId = editingVideo.cf_video_id;
+      let finalCoverUrl = editingVideo.cover_url;
+      let finalOutroUrl = editingVideo.outro_cover_url;
 
+      // 1. อัปโหลดรูปปกขึ้น R2 (ถ้ามีการเลือกรูปใหม่)
+      if (editingVideo.coverFile) {
+          const uploadedUrl = await uploadImageToR2(editingVideo.coverFile);
+          if (uploadedUrl) finalCoverUrl = uploadedUrl;
+      }
+      
+      // 2. อัปโหลดรูปปิดท้ายขึ้น R2 (ถ้ามีการเลือกรูปใหม่)
+      if (editingVideo.outroFile) {
+          const uploadedUrl = await uploadImageToR2(editingVideo.outroFile);
+          if (uploadedUrl) finalOutroUrl = uploadedUrl;
+      }
+
+      // 3. อัปโหลดวิดีโอขึ้น Cloudflare Stream
       if (editingVideo.videoFile) {
         console.log("ขอ URL อัปโหลดจาก Cloudflare...");
         const urlRes = await fetch(`${API_URL}/api/get-upload-url`, { method: 'POST' });
@@ -175,11 +205,11 @@ export default function CameraStudio({ setCurrentScreen }) {
         if (!cfRes.ok) throw new Error('Cloudflare ปฏิเสธการอัปโหลด');
 
         cfVideoId = urlData.uid; 
-        console.log("อัปโหลด Cloudflare สำเร็จ! ID:", cfVideoId);
       }
 
       const isoPublishDate = `${pubYear - 543}-${pubMonth}-${pubDay}T${pubTime}:00`;
       
+      // 4. บันทึกข้อมูลทั้งหมดลง Database
       const saveRes = await fetch(`${API_URL}/api/videos/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,8 +223,8 @@ export default function CameraStudio({ setCurrentScreen }) {
           publishDate: isoPublishDate,
           visibility: editingVideo.visibility || 'public',
           cf_video_id: cfVideoId,
-          cover_url: editingVideo.cover_url, 
-          outro_cover_url: editingVideo.outro_cover_url
+          cover_url: finalCoverUrl, // 🌟 ส่ง URL จาก R2
+          outro_cover_url: finalOutroUrl // 🌟 ส่ง URL จาก R2
         })
       });
       
@@ -214,12 +244,9 @@ export default function CameraStudio({ setCurrentScreen }) {
     }
   };
 
-  // ==========================================
-  // UI โครงสร้างหน้าต่าง
-  // ==========================================
+  // UI คงเดิมทั้งหมด
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-[#111] text-white relative overflow-hidden font-sans">
-      
       <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover z-0 bg-gray-900" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none"></div>
 
@@ -235,8 +262,6 @@ export default function CameraStudio({ setCurrentScreen }) {
       </div>
 
       <div className="absolute bottom-[80px] w-full z-20 flex flex-col items-center">
-        
-        {/* รายการวิดีโอรอตรวจ */}
         <div className="w-full px-4 mb-4">
           <h3 className="text-xs font-bold text-gray-300 mb-2 flex items-center gap-1">
             <Clock size={14} /> รายการของฉัน (รอดำเนินการ/แก้ไข) {isLoadingDrafts && <Loader2 size={12} className="animate-spin ml-2" />}
@@ -265,7 +290,6 @@ export default function CameraStudio({ setCurrentScreen }) {
           </div>
         </div>
 
-        {/* UI โหมด CREATE */}
         {mainMode === 'CREATE' && (
           <>
             <div className="flex gap-6 overflow-x-auto px-4 mb-6 text-sm font-semibold text-gray-300 w-full justify-center hide-scrollbar">
@@ -285,7 +309,6 @@ export default function CameraStudio({ setCurrentScreen }) {
           </>
         )}
 
-        {/* UI โหมด LIVE */}
         {mainMode === 'LIVE' && (
           <div className="w-full px-6 flex flex-col items-center mb-6">
             <div className="w-full bg-black/40 backdrop-blur-md rounded-2xl p-4 flex justify-between items-center mb-6 border border-white/10">
@@ -309,7 +332,6 @@ export default function CameraStudio({ setCurrentScreen }) {
         </div>
       </div>
 
-      {/* === Modal แก้ไขข้อมูลและ Preview === */}
       {editingVideo && (
         <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center p-0 sm:p-4">
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
@@ -323,7 +345,6 @@ export default function CameraStudio({ setCurrentScreen }) {
             
             <div className="p-5 overflow-y-auto space-y-4 text-[var(--text-heading)]">
               
-              {/* เครื่องเล่น Video */}
               <div className="w-full bg-black rounded-xl overflow-hidden shadow-inner border border-[var(--border-color)] relative">
                 <video 
                    src={editingVideo.isNew ? editingVideo.video_url : getCloudflareVideoUrl(editingVideo.cf_video_id, editingVideo.video_url)} 
