@@ -8,7 +8,7 @@ import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
-const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; // 🌟 โดเมน Cloudflare
+const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com';
 
 const THAI_MONTHS = [
   { value: '01', label: 'มกราคม' }, { value: '02', label: 'กุมภาพันธ์' }, { value: '03', label: 'มีนาคม' },
@@ -31,9 +31,10 @@ export default function CreateMedia({ setCurrentScreen }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const [filterMonth, setFilterMonth] = useState('all');
-const [sortBy, setSortBy] = useState('latest');
+  const [sortBy, setSortBy] = useState('latest');
 
   const [channelLogo, setChannelLogo] = useState(null);
+  const [logoFile, setLogoFile] = useState(null); // 🌟 เพิ่ม State เก็บไฟล์จริงเตรียมส่งขึ้น R2
   const [watermarkPos, setWatermarkPos] = useState('bottom-right');
   const logoInputRef = useRef(null);
   
@@ -59,7 +60,7 @@ const [sortBy, setSortBy] = useState('latest');
   const tabs = ['For You', 'Viral Song', 'Trendy', 'AI', 'Monthly Recap'];
 
   // ==========================================
-  // ฟังก์ชันตัวช่วยดึง URL
+  // ฟังก์ชันตัวช่วย (Helper)
   // ==========================================
   const getMediaUrl = (url) => {
     if (!url) return '';
@@ -67,10 +68,32 @@ const [sortBy, setSortBy] = useState('latest');
     return `${API_URL}${url}`;
   };
 
-  // 🌟 ฟังก์ชันสร้างลิงก์เล่นวิดีโอจาก Cloudflare
   const getCloudflareVideoUrl = (cfId, localUrl) => {
     if (cfId) return `${CF_DOMAIN}/${cfId}/manifest/video.m3u8`;
     return getMediaUrl(localUrl); 
+  };
+
+  // 🌟 ฟังก์ชันอัปโหลดรูปภาพครอบจักรวาล (ส่งไป Cloudflare R2)
+  const uploadImageToR2 = async (imageFile) => {
+    try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        const res = await fetch(`${API_URL}/api/upload/image`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            return data.url; // ส่ง URL สาธารณะของรูปกลับมา
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('R2 Upload Error:', error);
+        return null;
+    }
   };
 
   const loadChannelVideos = async (userId) => {
@@ -156,11 +179,12 @@ const [sortBy, setSortBy] = useState('latest');
   };
 
   // ==========================================
-  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้
+  // 4. ฟังก์ชันอัปโหลดและบันทึกโลโก้ (อัปเดตใหม่)
   // ==========================================
   const handleLogoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setLogoFile(file); // 🌟 เก็บไฟล์ตัวจริงไว้เตรียมอัปโหลด
     const reader = new FileReader();
     reader.onloadend = () => {
       setChannelLogo(reader.result); 
@@ -170,22 +194,42 @@ const [sortBy, setSortBy] = useState('latest');
   };
 
   const handleSaveLogo = async () => {
+    if (!logoFile) return;
     setIsSavingLogo(true);
-    const userId = localStorage.getItem('currentUserId');
-    if (userId && channelData) {
-      try {
-        await fetch(`${API_URL}/api/channels/logo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, logoBase64: channelLogo, watermarkPosition: watermarkPos })
+    try {
+        // 1. โยนรูปขึ้น R2 โดยใช้ฟังก์ชันกลาง
+        const r2ImageUrl = await uploadImageToR2(logoFile);
+        
+        if (!r2ImageUrl) {
+            alert('อัปโหลดรูปล้มเหลว กรุณาลองใหม่');
+            setIsSavingLogo(false);
+            return;
+        }
+
+        // 2. นำ URL สั้นๆ ไปอัปเดตลง Database
+        const userId = localStorage.getItem('currentUserId');
+        const saveRes = await fetch(`${API_URL}/api/channels/logo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userId,
+                logoBase64: r2ImageUrl, // ตอนนี้ส่ง URL ไปแทนแล้ว
+                watermarkPosition: watermarkPos // 🌟 แก้ชื่อตัวแปรให้ถูกต้อง
+            })
         });
-        setIsLogoChanged(false); 
-        alert("บันทึกโลโก้เรียบร้อยแล้ว");
-      } catch (err) {
-        console.error("อัปโหลดโลโก้ล้มเหลว", err);
-      } finally {
+        const saveData = await saveRes.json();
+
+        if (saveData.success) {
+            alert('อัปโหลดและบันทึกโลโก้สำเร็จ!');
+            setIsLogoChanged(false);
+            setLogoFile(null); // ล้างค่าไฟล์
+            setChannelLogo(r2ImageUrl); // อัปเดตรูปโชว์หน้าจอเป็นลิงก์จริง
+        }
+    } catch (error) {
+        console.error('Error uploading to R2:', error);
+        alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+    } finally {
         setIsSavingLogo(false);
-      }
     }
   };
 
@@ -252,13 +296,12 @@ const [sortBy, setSortBy] = useState('latest');
         });
         const data = await res.json();
         if (data.success) {
-            // เอาวิดีโอที่ลบแล้วออกจากหน้าจอทันทีโดยไม่ต้องโหลดเว็บใหม่
             setChannelVideos(prev => prev.filter(v => v.id !== videoId));
         }
     } catch(err) {
         console.error(err);
     }
-};
+  };
 
   // ==========================================
   // 6. โครงสร้างหน้าเว็บ (UI)
@@ -334,7 +377,6 @@ const [sortBy, setSortBy] = useState('latest');
                     {channelData.category === 'business' ? 'ธุรกิจและการลงทุน' : channelData.category === 'education' ? 'การศึกษา / ให้ความรู้' : channelData.category === 'lifestyle' ? 'ไลฟ์สไตล์ / บันเทิง' : channelData.category === 'news' ? 'ข่าวสาร' : channelData.category}
                   </span>
                   
-                  {/* ปุ่ม Icon บันทึกโลโก้ จะแสดงเมื่อมีการเลือกรูปใหม่ */}
                   {isLogoChanged && (
                     <button onClick={handleSaveLogo} disabled={isSavingLogo} className="mt-2 bg-green-500 text-white text-[10px] px-3 py-1 rounded-full flex items-center gap-1 w-fit shadow-md hover:bg-green-600 transition">
                       {isSavingLogo ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} บันทึกโลโก้
@@ -381,14 +423,13 @@ const [sortBy, setSortBy] = useState('latest');
           </button>
         </div>
 
-        {/* --- ส่วนที่ 4: แสดงวิดีโอ (🌟 เล่นผ่าน Cloudflare HLS พร้อมระบบกรองและลบ) --- */}
+        {/* --- ส่วนที่ 4: แสดงวิดีโอ --- */}
         {channelData && channelData.id && (
           <>
             <div className="flex justify-between items-center px-4 mt-6 mb-3">
               <h2 className="text-lg font-bold">ผลงานวิดีโอของฉัน</h2>
             </div>
             
-            {/* แถบเครื่องมือ ตัวกรอง และ การจัดเรียง (เพิ่มใหม่) */}
             <div className="flex gap-3 px-4 mb-3 mt-2">
               <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="bg-[var(--card-bg)] text-xs text-[var(--text-heading)] p-2 rounded-lg border border-[var(--border-color)] outline-none flex-1">
                 <option value="all">ทุกเดือน</option>
@@ -409,7 +450,6 @@ const [sortBy, setSortBy] = useState('latest');
                     .map(video => (
                     <div key={video.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-md flex flex-col">
                       
-                      {/* Video Player ที่ดึง URL .m3u8 จากฟังก์ชัน */}
                       <div className={`w-full bg-black relative ${video.aspect_ratio === '16:9' ? 'aspect-video' : 'aspect-[3/4]'}`}>
                         <video 
                           src={getCloudflareVideoUrl(video.cf_video_id, video.url_high || video.video_url)} 
@@ -420,7 +460,6 @@ const [sortBy, setSortBy] = useState('latest');
                           controlsList="nodownload"
                           className="w-full h-full object-contain relative z-10" 
                         />
-                        {/* ป้ายสถานะ */}
                         <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
                           {video.status === 'pending' && <span className="bg-orange-500/90 text-white text-[9px] px-2 py-0.5 rounded shadow">รอตรวจ</span>}
                           {video.visibility === 'private' ? (
@@ -445,12 +484,9 @@ const [sortBy, setSortBy] = useState('latest');
                           <button onClick={() => openVideoEditModal(video)} className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-orange-400 text-orange-400 rounded-lg text-[10px] font-bold hover:bg-orange-400/10 transition">
                             <Edit2 size={10} /> แก้ไข
                           </button>
-                          
-                          {/* แก้ไขปุ่มลบให้เรียกใช้ฟังก์ชัน handleDeleteVideo */}
                           <button onClick={() => handleDeleteVideo(video.id)} className="flex-1 flex justify-center items-center gap-1 py-1.5 border border-red-500 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-500/10 transition">
                             <Trash2 size={10} /> ลบ
                           </button>
-                          
                         </div>
                       </div>
                     </div>
@@ -511,18 +547,8 @@ const [sortBy, setSortBy] = useState('latest');
                 </select>
               </div>
 
-                <div>
-             <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">รายละเอียด (Description)</label>
-            <textarea 
-                 value={editingVideo.description || ''} 
-             onChange={e => setEditingVideo({...editingVideo, description: e.target.value})} 
-             className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm min-h-[80px]" 
-             placeholder="พิมพ์รายละเอียดวิดีโอ..." 
-             />
-            </div>
-
               <div>
-                <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">รายละเอียด (Description)</label>
+                <label className="text-[10px] text-[var(--icon-inactive)] uppercase mb-1 block">รายละเอียดช่อง (Description)</label>
                 <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-[var(--app-bg)] border border-[var(--border-color)] text-[var(--text-heading)] rounded-lg px-3 py-2.5 outline-none focus:border-[var(--icon-active)] text-sm min-h-[80px]" placeholder="คำอธิบายสั้นๆ เกี่ยวกับช่องของคุณ..." />
               </div>
               <button onClick={handleSaveChannel} disabled={isSubmitting} className="w-full bg-[var(--icon-active)] text-[var(--app-bg)] font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4 hover:opacity-90 transition disabled:opacity-50 text-sm tracking-widest shadow-lg">
