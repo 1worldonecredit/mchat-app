@@ -231,26 +231,3 @@
     background-color: #000;
   }
 }
-/* =========================================
-   M-Chat Media Feed (เฉพาะจอคอมพิวเตอร์เท่านั้น)
-   ตั้งค่าไว้ที่ 1025px เพื่อไม่ให้กระทบ iPad Pro (1024px)
-   ========================================= */
-@media (min-width: 1025px) {
-  .media-desktop-bg {
-    background-color: #000000 !important;
-  }
-  .media-desktop-container {
-    margin: 0 auto !important;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  .media-desktop-container.is-9-16 {
-    max-width: 450px !important;
-  }
-  .media-desktop-container.is-16-9 {
-    max-width: 900px !important;
-  }
-  .media-desktop-video.is-16-9 {
-    object-fit: contain !important;
-  }
-}
