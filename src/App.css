@@ -233,29 +233,36 @@
 }
 
 /* =========================================
-   จัดระเบียบ UI หน้าฟีดวิดีโอ (เฉพาะบนจอคอม Desktop)
+   จัดการแสดงผลหน้าคอมพิวเตอร์ (ไม่กระทบมือถือ/แท็บเล็ต)
    ========================================= */
-@media (min-width: 1024px) {
-  /* ทำให้พื้นหลังสุดเป็นสีดำ/เทาเข้ม */
-  .media-scroll-area {
-    background-color: #0a0a0a !important; 
+
+/* ให้ทำงานเฉพาะหน้าจอที่กว้างกว่าแท็บเล็ต (1025px ขึ้นไป) */
+@media (min-width: 1025px) {
+  /* พื้นหลังนอกกรอบวิดีโอเป็นสีดำ */
+  .desktop-feed-bg {
+    background-color: #0a0a0a !important;
   }
 
-  /* บังคับให้กรอบวิดีโอและ UI อยู่กึ่งกลางจอเสมอ */
-  .media-item-container {
+  /* บังคับกรอบวิดีโอให้อยู่กึ่งกลางจอเสมอ */
+  .desktop-item-container {
     margin: 0 auto !important;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* เพิ่มเงาให้ตัวกรอบดูลอยขึ้นมา */
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid #222;
+    border-right: 1px solid #222;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
   }
 
-  /* กรอบสำหรับวิดีโอแนวตั้ง (9:16) - ล็อกความกว้างเท่าหน้าจอมือถือ */
-  .media-item-container.layout-9-16 {
+  /* กรอบวิดีโอแนวตั้ง (9:16) - ขนาดเท่ามือถือ */
+  .desktop-item-container.layout-9-16 {
     max-width: 450px !important;
   }
 
-  /* กรอบสำหรับวิดีโอแนวนอน (16:9) - ให้กว้างขึ้นแบบแนวนอน */
-  .media-item-container.layout-16-9 {
-    max-width: 900px !important; 
+  /* กรอบวิดีโอแนวนอน (16:9) - ขยายกว้างขึ้น */
+  .desktop-item-container.layout-16-9 {
+    max-width: 900px !important;
+  }
+
+  /* วิดีโอแนวนอนบนคอม ให้แสดงแบบ Contain (เต็มใบ ไม่ซูมจนขอบขาด) */
+  .desktop-video-player.is-16-9 {
+    object-fit: contain !important;
   }
 }
