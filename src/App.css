@@ -231,38 +231,3 @@
     background-color: #000;
   }
 }
-
-/* =========================================
-   จัดการแสดงผลหน้าคอมพิวเตอร์ (ไม่กระทบมือถือ/แท็บเล็ต)
-   ========================================= */
-
-/* ให้ทำงานเฉพาะหน้าจอที่กว้างกว่าแท็บเล็ต (1025px ขึ้นไป) */
-@media (min-width: 1025px) {
-  /* พื้นหลังนอกกรอบวิดีโอเป็นสีดำ */
-  .desktop-feed-bg {
-    background-color: #0a0a0a !important;
-  }
-
-  /* บังคับกรอบวิดีโอให้อยู่กึ่งกลางจอเสมอ */
-  .desktop-item-container {
-    margin: 0 auto !important;
-    border-left: 1px solid #222;
-    border-right: 1px solid #222;
-    box-shadow: 0 0 40px rgba(0,0,0,0.8);
-  }
-
-  /* กรอบวิดีโอแนวตั้ง (9:16) - ขนาดเท่ามือถือ */
-  .desktop-item-container.layout-9-16 {
-    max-width: 450px !important;
-  }
-
-  /* กรอบวิดีโอแนวนอน (16:9) - ขยายกว้างขึ้น */
-  .desktop-item-container.layout-16-9 {
-    max-width: 900px !important;
-  }
-
-  /* วิดีโอแนวนอนบนคอม ให้แสดงแบบ Contain (เต็มใบ ไม่ซูมจนขอบขาด) */
-  .desktop-video-player.is-16-9 {
-    object-fit: contain !important;
-  }
-}
