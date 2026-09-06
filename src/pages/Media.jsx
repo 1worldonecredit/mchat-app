@@ -19,7 +19,7 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   const [videoQuality, setVideoQuality] = useState('med'); 
   const [myAvatar, setMyAvatar] = useState(null);
   const [allVideos, setAllVideos] = useState([]);
-  const [isMuted, setIsMuted] = useState(true); // เพิ่ม State ควบคุมเสียง
+  const [isMuted, setIsMuted] = useState(true);
 
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
@@ -166,125 +166,123 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
         </div>
 
-        {/* 🌟 กล่องนอกสุด (ใส่คลาส media-feed-wrapper) */}
         <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area media-feed-wrapper">
-          {displayVideos.length > 0 ? displayVideos.map((video) => (
+          {displayVideos.length > 0 ? displayVideos.map((video) => {
             
-            {/* 🌟 กล่องครอบวิดีโอ (ใส่คลาส media-feed-container) */}
-            <div 
-              key={video.id} 
-              className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden media-feed-container ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
-            >
-              
-              {/* 🌟 ตัววิดีโอ (ใส่คลาส media-feed-video) */}
-              <video 
-                src={getVideoUrl(video)}
-                className={`h-full w-full cursor-pointer object-cover media-feed-video ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
-                autoPlay 
-                loop 
-                muted={isMuted}
-                playsInline
-                onClick={() => setIsMuted(!isMuted)} 
-              />
+            /* 🌟 แยกเงื่อนไขการเช็ก Class ออกมาตรงนี้ เพื่อป้องกัน VS Code อ่านโค้ดเพี้ยน */
+            const is16by9 = video.aspectRatio === '16:9';
+            const isFullScreen = fullScreenId === video.id;
+            const containerClass = `relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden media-feed-container ${is16by9 ? 'is-16-9' : 'is-9-16'} ${isFullScreen ? 'fixed inset-0 z-[100] !max-w-full' : ''}`;
+            const videoClass = `h-full w-full cursor-pointer object-cover media-feed-video ${is16by9 ? 'is-16-9' : 'is-9-16'}`;
 
-              {video.watermarkUrl && (
-                <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
-                  <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
-                </div>
-              )}
+            return (
+              <div key={video.id} className={containerClass}>
+                
+                <video 
+                  src={getVideoUrl(video)}
+                  className={videoClass}
+                  autoPlay 
+                  loop 
+                  muted={isMuted}
+                  playsInline
+                  onClick={() => setIsMuted(!isMuted)} 
+                />
 
-              <button 
-                onClick={() => toggleFullScreen(video.id)}
-                className="absolute top-20 right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
-              >
-                {fullScreenId === video.id ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-              </button>
+                {video.watermarkUrl && (
+                  <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
+                    <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
+                  </div>
+                )}
 
-              <div className="absolute bottom-0 left-0 w-full h-[60%] bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/60 to-transparent z-0 pointer-events-none"></div>
-
-              <div className="absolute bottom-4 left-3 z-10 flex flex-col items-start max-w-[70%]">
                 <button 
-                  onClick={() => setShowCart(true)}
-                  className="flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] px-3 py-1.5 rounded-lg mb-3 hover:scale-105 transition shadow-lg"
+                  onClick={() => toggleFullScreen(video.id)}
+                  className="absolute top-20 right-4 z-30 p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:text-[var(--icon-active)] transition"
                 >
-                  <ShoppingCart size={16} />
-                  <span className="text-xs font-bold tracking-wider">ตะกร้าสินค้า 9Plus</span>
+                  {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                 </button>
 
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-bold text-[15px] text-[var(--text-heading)] drop-shadow-md truncate">@{video.channelName}</h3>
-                  <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
-                    {video.tier}
-                  </span>
-                  {!followedChannels.includes(video.channelName) && (
-                    <button 
-                      onClick={() => toggleFollow(video.channelName)}
-                      className="ml-2 bg-[var(--icon-active)] text-[var(--app-bg)] px-2 py-0.5 rounded text-[10px] font-bold hover:scale-105 transition shadow-md"
-                    >
-                      ติดตาม
-                    </button>
-                  )}
-                </div>
-                
-                <p className="text-[13px] mb-3 line-clamp-2 text-[var(--text-heading)] drop-shadow-md opacity-90 w-full pr-2">{video.caption}</p>
-                
-                <div className="flex items-center gap-2 text-xs font-medium w-full">
-                  <Music size={14} className="text-[var(--icon-active)] animate-pulse shrink-0" />
-                  <div className="flex-1 overflow-hidden whitespace-nowrap mask-image-fade">
-                    <p className="animate-text-slide text-[var(--icon-inactive)]">{video.sound}</p>
-                  </div>
-                </div>
-              </div>
+                <div className="absolute bottom-0 left-0 w-full h-[60%] bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/60 to-transparent z-0 pointer-events-none"></div>
 
-              <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px]">
-                <div 
-                  className="relative mb-2 cursor-pointer hover:scale-105 transition"
-                  onClick={() => setCurrentScreen('create_media')} 
-                >
-                  <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
-                    {myAvatar ? (
-                      <img src={myAvatar} alt="My Profile" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      <img src={video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                <div className="absolute bottom-4 left-3 z-10 flex flex-col items-start max-w-[70%]">
+                  <button 
+                    onClick={() => setShowCart(true)}
+                    className="flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--icon-active)] text-[var(--icon-active)] px-3 py-1.5 rounded-lg mb-3 hover:scale-105 transition shadow-lg"
+                  >
+                    <ShoppingCart size={16} />
+                    <span className="text-xs font-bold tracking-wider">ตะกร้าสินค้า 9Plus</span>
+                  </button>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-[15px] text-[var(--text-heading)] drop-shadow-md truncate">@{video.channelName}</h3>
+                    <span className="text-[9px] font-bold bg-[var(--icon-active)] text-[var(--app-bg)] px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                      {video.tier}
+                    </span>
+                    {!followedChannels.includes(video.channelName) && (
+                      <button 
+                        onClick={() => toggleFollow(video.channelName)}
+                        className="ml-2 bg-[var(--icon-active)] text-[var(--app-bg)] px-2 py-0.5 rounded text-[10px] font-bold hover:scale-105 transition shadow-md"
+                      >
+                        ติดตาม
+                      </button>
                     )}
                   </div>
-                  {!followedChannels.includes(video.channelName) && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation(); 
-                        toggleFollow(video.channelName);
-                      }}
-                      className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95 shadow-md"
-                    >
-                      <Plus size={14} strokeWidth={3} />
-                    </button>
-                  )}
+                  
+                  <p className="text-[13px] mb-3 line-clamp-2 text-[var(--text-heading)] drop-shadow-md opacity-90 w-full pr-2">{video.caption}</p>
+                  
+                  <div className="flex items-center gap-2 text-xs font-medium w-full">
+                    <Music size={14} className="text-[var(--icon-active)] animate-pulse shrink-0" />
+                    <div className="flex-1 overflow-hidden whitespace-nowrap mask-image-fade">
+                      <p className="animate-text-slide text-[var(--icon-inactive)]">{video.sound}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
-                  <div className="active:scale-90 transition p-1">
-                    <Heart size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
+                <div className="absolute bottom-4 right-3 z-10 flex flex-col items-center gap-4 w-[50px]">
+                  <div 
+                    className="relative mb-2 cursor-pointer hover:scale-105 transition"
+                    onClick={() => setCurrentScreen('create_media')} 
+                  >
+                    <div className="w-10 h-10 rounded-full border-2 border-[var(--icon-active)] p-0.5 bg-[var(--card-bg)] overflow-hidden">
+                      <img src={myAvatar ? myAvatar : video.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    </div>
+                    {!followedChannels.includes(video.channelName) && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation(); 
+                          toggleFollow(video.channelName);
+                        }}
+                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--icon-active)] text-[var(--app-bg)] rounded-full p-0.5 hover:scale-110 transition active:scale-95 shadow-md"
+                      >
+                        <Plus size={14} strokeWidth={3} />
+                      </button>
+                    )}
                   </div>
-                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.likes}</span>
+
+                  <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                    <div className="active:scale-90 transition p-1">
+                      <Heart size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.likes}</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                    <div className="active:scale-90 transition p-1">
+                      <MessageCircle size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.comments}</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-0.5 cursor-pointer">
+                    <div className="active:scale-90 transition p-1">
+                      <Share2 size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.shares}</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
-                  <div className="active:scale-90 transition p-1">
-                    <MessageCircle size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.comments}</span>
-                </div>
-
-                <div className="flex flex-col items-center gap-0.5 cursor-pointer">
-                  <div className="active:scale-90 transition p-1">
-                    <Share2 size={28} className="text-[var(--icon-inactive)] hover:text-[var(--icon-active)] transition-colors drop-shadow-md" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-[var(--icon-inactive)]">{video.shares}</span>
-                </div>
               </div>
-
-            </div>
-          )) : (
+            );
+          }) : (
             <div className="flex items-center justify-center h-full text-[var(--icon-inactive)] flex-col gap-2">
               <Tv size={48} className="opacity-20" />
               <p>ยังไม่มีวิดีโอในขณะนี้</p>
