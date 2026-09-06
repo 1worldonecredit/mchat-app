@@ -174,17 +174,17 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area desktop-feed-bg">
+        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area media-desktop-bg">
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             
             <div 
               key={video.id} 
-              className={`relative h-full w-full snap-start snap-always bg-black overflow-hidden desktop-item-container ${video.aspectRatio === '16:9' ? 'layout-16-9' : 'layout-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
+              className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden media-desktop-container ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
             >
               
               <video 
                 src={getVideoUrl(video)}
-                className={`h-full w-full cursor-pointer desktop-video-player ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
+                className={`h-full w-full cursor-pointer object-cover media-desktop-video ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
                 autoPlay 
                 loop 
                 muted={isMuted}
