@@ -182,4 +182,30 @@
     border-right-color: var(--border);
   }
 }
+/* =========================================
+   เฉพาะหน้า Media Feed บนจอคอมพิวเตอร์ (>1024px)
+   ========================================= */
+@media (min-width: 1025px) {
+  .media-feed-wrapper {
+    background-color: #0a0a0a !important;
+  }
+  
+  .media-feed-container {
+    margin: 0 auto !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
 
+  .media-feed-container.is-9-16 {
+    max-width: 450px !important;
+  }
+
+  .media-feed-container.is-16-9 {
+    max-width: 900px !important;
+  }
+
+  .media-feed-video.is-16-9 {
+    object-fit: contain !important;
+  }
+}

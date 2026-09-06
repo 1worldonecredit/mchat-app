@@ -8,7 +8,7 @@ import BottomNav from '../components/BottomNav';
 import { fetchUserProfile } from '../utils/apiProfile'; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mchatapi.9plus.app';
-const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com'; // โดเมน Cloudflare
+const CF_DOMAIN = 'https://customer-a6fkepv8oxw1um16.cloudflarestream.com';
 
 export default function Media({ setCurrentScreen, onMenuChange }) {
   const [showCart, setShowCart] = useState(false);
@@ -18,10 +18,8 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
   const [fullScreenId, setFullScreenId] = useState(null);
   const [videoQuality, setVideoQuality] = useState('med'); 
   const [myAvatar, setMyAvatar] = useState(null);
-  const [isMuted, setIsMuted] = useState(true); // เริ่มต้นให้ปิดเสียงไว้ก่อนเพื่อให้ Autoplay ทำงานได้
-  
-  // 🌟 เปลี่ยนจากการ Fix ค่า เป็น State ว่างๆ รอรับจาก API
   const [allVideos, setAllVideos] = useState([]);
+  const [isMuted, setIsMuted] = useState(true); // เพิ่ม State ควบคุมเสียง
 
   const toggleFullScreen = (id) => {
     setFullScreenId(fullScreenId === id ? null : id);
@@ -43,10 +41,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
         .catch(err => console.error("โหลดรูปโปรไฟล์ล้มเหลว:", err));
     }
     
-    // 🌟 เรียกใช้ฟังก์ชันดึงวิดีโอเมื่อเปิดหน้านี้
     loadFeed();
   }, []);
-// 🌟 ฟังก์ชันดึงข้อมูลจาก Database และแปลงให้เข้ากับ UI เดิม
+
   const loadFeed = async () => {
     try {
       const res = await fetch(`${API_URL}/api/videos/feed`);
@@ -65,10 +62,9 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           url_low: v.url_low,
           url_med: v.url_med,
           url_high: v.url_high,
-          cf_video_id: v.cf_video_id, // รหัส Cloudflare
+          cf_video_id: v.cf_video_id,
           targetProvince: 'All', 
-          aspectRatio: v.aspect_ratio || '9:16', // 🌟 เพิ่มการดึงค่าสัดส่วนวิดีโอ (ค่าเริ่มต้นคือ 9:16)
-          // จัดการ URL ลายน้ำ (ถ้ารูปมาจาก R2 จะเป็น http นำหน้าอยู่แล้ว)
+          aspectRatio: v.aspect_ratio || '9:16', 
           watermarkUrl: v.watermark_url ? (v.watermark_url.startsWith('http') ? v.watermark_url : `${API_URL}${v.watermark_url}`) : null,
           watermarkPos: v.watermark_position || 'bottom-right'
         }));
@@ -79,14 +75,10 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
     }
   };
 
-  // 🌟 ฟังก์ชันจัดการลิงก์วิดีโอ (ดึง Cloudflare HLS เป็นหลัก)
   const getVideoUrl = (video) => {
-    // ถ้ามี Cloudflare ID ให้ดึงสตรีม m3u8 มาเล่น
     if (video.cf_video_id) {
       return `${CF_DOMAIN}/${video.cf_video_id}/manifest/video.m3u8`;
     }
-    
-    // สำรอง: ดึงจากไฟล์เก่าในเซิร์ฟเวอร์
     let url = video.url_med || video.url_high || video.url_low;
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('blob:')) return url;
@@ -174,17 +166,20 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
           </div>
         </div>
 
-        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area media-desktop-bg">
+        {/* 🌟 กล่องนอกสุด (ใส่คลาส media-feed-wrapper) */}
+        <div className="absolute inset-0 overflow-y-auto overflow-x-hidden snap-y snap-mandatory media-scroll-area media-feed-wrapper">
           {displayVideos.length > 0 ? displayVideos.map((video) => (
             
+            {/* 🌟 กล่องครอบวิดีโอ (ใส่คลาส media-feed-container) */}
             <div 
               key={video.id} 
-              className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden media-desktop-container ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
+              className={`relative h-full w-full snap-start snap-always bg-[var(--card-bg)] overflow-hidden media-feed-container ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'} ${fullScreenId === video.id ? 'fixed inset-0 z-[100] !max-w-full' : ''}`}
             >
               
+              {/* 🌟 ตัววิดีโอ (ใส่คลาส media-feed-video) */}
               <video 
                 src={getVideoUrl(video)}
-                className={`h-full w-full cursor-pointer object-cover media-desktop-video ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
+                className={`h-full w-full cursor-pointer object-cover media-feed-video ${video.aspectRatio === '16:9' ? 'is-16-9' : 'is-9-16'}`}
                 autoPlay 
                 loop 
                 muted={isMuted}
@@ -192,7 +187,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
                 onClick={() => setIsMuted(!isMuted)} 
               />
 
-              {/* ลายน้ำโลโก้ช่อง */}
               {video.watermarkUrl && (
                 <div className={`absolute z-10 opacity-60 pointer-events-none w-10 h-10 ${getWatermarkPositionClass(video.watermarkPos)}`}>
                   <img src={video.watermarkUrl} alt="Watermark" className="w-full h-full object-contain filter drop-shadow-lg" />
@@ -297,7 +291,6 @@ export default function Media({ setCurrentScreen, onMenuChange }) {
             </div>
           )}
         </div>
-        
       </div>
 
       {showCart && (
